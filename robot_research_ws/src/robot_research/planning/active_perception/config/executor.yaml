@@ -1,0 +1,14 @@
+nbv_executor:
+  ros__parameters:
+    execution_enabled: false
+    best_pose_topic: /active_perception/best_view_pose
+    belief_topic: /active_perception/target_belief
+    observation_count_topic: /active_perception/target_observation_count
+    visible_topic: /active_perception/target_visible
+    target_id_topic: /active_perception/selected_target_id
+    navigate_action: /navigate_to_pose
+    goal_max_age_seconds: 120.0
+    navigation_timeout_seconds: 120.0
+    post_observation_timeout_seconds: 10.0
+    minimum_new_observations: 10
+    output_directory: /tmp/active_perception_executions

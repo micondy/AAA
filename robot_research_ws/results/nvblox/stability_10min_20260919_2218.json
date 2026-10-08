@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "duration_wall_s": 600.1166133919996,
+  "minimum_path_length_m": 0.8,
+  "maximum_depth_gap_s": 1.0,
+  "path_length_m": 2.710024885168551,
+  "streams": {
+    "depth": {
+      "count": 5912,
+      "rate_hz": 9.998314763951802,
+      "max_gap_s": 0.18371862399999372
+    },
+    "mesh": {
+      "count": 2282,
+      "rate_hz": 3.861324136749046,
+      "max_gap_s": 0.5505429559998447
+    },
+    "esdf_pointcloud": {
+      "count": 2733,
+      "rate_hz": 4.622351006234363,
+      "max_gap_s": 0.2840252779997172
+    },
+    "map_slice": {
+      "count": 2733,
+      "rate_hz": 4.622350728678045,
+      "max_gap_s": 0.28391201900012675
+    },
+    "odom": {
+      "count": 35483,
+      "rate_hz": 60.00832398195507,
+      "max_gap_s": 0.0822567010000057
+    }
+  },
+  "gpu": {
+    "sample_count": 596,
+    "memory_used_mb": {
+      "mean": 3304.969798657718,
+      "max": 3452.0
+    },
+    "utilization_percent": {
+      "mean": 64.84731543624162,
+      "max": 97.0
+    },
+    "temperature_c": {
+      "mean": 63.12751677852349,
+      "max": 66.0
+    }
+  },
+  "map_content": {
+    "nonempty_mesh_messages": 1142,
+    "max_mesh_blocks": 570,
+    "max_mesh_vertices": 25109,
+    "nonempty_esdf_clouds": 2733,
+    "max_esdf_points": 11847,
+    "nonempty_slices": 2733,
+    "max_slice_cells": 50112,
+    "max_observed_slice_cells": 11847
+  },
+  "checks": {
+    "depth_received": true,
+    "mesh_nonempty": true,
+    "esdf_cloud_nonempty": true,
+    "esdf_slice_observed": true,
+    "minimum_path_length": true,
+    "depth_gap_bounded": true
+  }
+}

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Mobile Base 控制台</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/maintenance.css?v=2">
+  <link rel="stylesheet" href="/visualization.css?v=6">
+</head>
+<body>
+  <header>
+    <div><span class="mark">A</span><strong>Mobile Base</strong><small>四轮四转调试控制台</small></div>
+    <div class="header-status"><span id="serverDot" class="dot"></span><span id="serverText">正在连接</span></div>
+  </header>
+  <nav class="app-nav" aria-label="主导航">
+    <button class="nav-item active" data-page="overview"><span>总览</span><small>状态与事件</small></button>
+    <button class="nav-item" data-page="visualization"><span>地图与 3D</span><small>导航与环境</small></button>
+    <button class="nav-item" data-page="control"><span>手动控制</span><small>整车运动</small></button>
+    <button class="nav-item" data-page="maintenance"><span>维护调试</span><small>单轮标定</small></button>
+    <button class="nav-item" data-page="settings"><span>参数配置</span><small>CAN 与限值</small></button>
+  </nav>
+  <main>
+    <div class="page active" data-page-panel="overview">
+    <section class="hero panel">
+      <div><p class="eyebrow">ROS 2 / LAN CONSOLE</p><h1>底盘状态，一眼看清。</h1><p>局域网监控、低速调试和可迁移配置。正常模式点击启用，单轮维护按住执行。</p></div>
+      <button id="stop" class="stop">立即停车</button>
+    </section>
+
+    <section class="status-grid">
+      <article class="panel metric"><span>CAN 总线</span><strong id="canValue">—</strong><small id="canDetail">等待数据</small></article>
+      <article class="panel metric"><span>关节反馈</span><strong id="jointValue">—</strong><small id="jointDetail">等待 /joint_states</small></article>
+      <article class="panel metric"><span>里程计</span><strong id="odomValue">—</strong><small id="odomDetail">等待 odom</small></article>
+      <article class="panel metric"><span>安全诊断</span><strong id="diagnosticValue">—</strong><small id="diagnosticDetail">等待反馈与控制器状态</small></article>
+    </section>
+
+    <section class="two-column overview-lower">
+      <article class="panel">
+        <div class="section-title"><div><p class="eyebrow">TELEMETRY</p><h2>关节与位姿</h2></div></div>
+        <div id="joints" class="joint-list"><p class="empty">还没有收到关节反馈</p></div>
+        <div id="pose" class="pose"><span>x —</span><span>y —</span><span>yaw —</span></div>
+      </article>
+      <article class="panel">
+        <div class="section-title"><div><p class="eyebrow">EVENTS</p><h2>事件记录</h2></div><button id="setToken" class="ghost small">访问令牌</button></div>
+        <div id="events" class="events"><p class="empty">暂无事件</p></div>
+      </article>
+    </section>
+    </div>
+
+    <div class="page" data-page-panel="visualization">
+      <div class="page-heading"><div><p class="eyebrow">LIVE VISUALIZATION</p><h1>地图与 3D 车体</h1><p>根据里程计和关节反馈实时更新，不依赖外网。</p></div><button class="stop compact-stop" data-stop>立即停车</button></div>
+      <section class="visual-grid">
+        <article class="panel map-panel">
+          <div class="section-title">
+            <div><p class="eyebrow">LOCAL MAP</p><h2>SLAM 与轨迹地图 <span id="mapSourceBadge" class="badge map-source">等待 /map</span></h2></div>
+            <div class="map-tools"><button id="mapZoomOut" class="ghost small" aria-label="缩小地图">−</button><span id="mapScale">5 m</span><button id="mapZoomIn" class="ghost small" aria-label="放大地图">＋</button><button id="mapCenter" class="ghost small">跟随车辆</button><button id="mapClear" class="ghost small">清除轨迹</button></div>
+          </div>
+          <div class="map-wrap"><canvas id="mapCanvas" aria-label="车辆局部轨迹地图"></canvas><div class="map-hint">按下选择位置，拖动设置目标朝向；矩形为真实车体</div><div class="map-legend"><span><i class="legend-free"></i>可通行</span><span><i class="legend-unknown"></i>未知</span><span><i class="legend-obstacle"></i>障碍</span><span><i class="legend-path"></i>轨迹</span><span id="bodyLegend"><i class="legend-car"></i>车体尺寸</span><span><i class="legend-footprint"></i>导航轮廓</span></div></div>
+          <div id="mapPose" class="pose"><span>x —</span><span>y —</span><span>航向 —</span></div>
+          <div class="navigation-controls">
+            <div><strong id="navState">点击地图选择导航目标</strong><small id="navDetail">目标使用 map 坐标系</small></div>
+            <label class="nav-heading">目标朝向 <span><input id="navYaw" type="number" min="-180" max="180" step="1" value="0" disabled>°</span></label>
+            <button id="sendNavGoal" class="secondary" disabled>开始导航</button>
+            <button id="cancelNavGoal" class="ghost">取消导航</button>
+          </div>
+        </article>
+        <article class="panel vehicle-panel">
+          <div class="section-title"><div><p class="eyebrow">SPATIAL VIEW</p><h2>3D 环境与底盘</h2></div><div class="view-switch"><button id="showScene3d" class="ghost small active">Nvblox 环境</button><button id="showVehicle3d" class="ghost small">真实底盘俯视</button><button id="resetView" class="ghost small">重置视角</button></div></div>
+          <div id="scene3dStage" class="scene3d-stage">
+            <canvas id="scene3dCanvas" aria-label="Nvblox 三维环境地图"></canvas>
+            <div id="scene3dStatus" class="scene3d-status">等待 /nvblox_node/mesh</div>
+            <div class="orientation"><b>3D</b><span>拖动旋转 · 滚轮缩放</span></div>
+          </div>
+          <div id="vehicleStage" class="vehicle-stage" aria-label="按实车尺寸绘制的底盘俯视模型">
+            <canvas id="vehicleCanvas" aria-label="底盘真实几何俯视图"></canvas>
+            <div class="orientation"><b>前</b><span><i class="target-vector"></i>橙色虚线＝目标行走方向　<i class="actual-vector"></i>蓝色实线＝实际滚动方向</span></div>
+          </div>
+          <div id="modelWheelData" class="model-wheel-data hidden"></div>
+        </article>
+      </section>
+    </div>
+
+    <div class="page" data-page-panel="control">
+    <section class="single-page-column">
+      <article class="panel control-panel">
+        <div class="section-title"><div><p class="eyebrow">MANUAL CONTROL</p><h2>手动低速控制</h2></div><span id="controlBadge" class="badge">DISABLED</span></div>
+        <div class="control-body">
+          <div>
+            <div id="joystick" class="joystick" aria-label="平移摇杆"><div class="axis-x"></div><div class="axis-y"></div><div id="stick" class="stick"></div><span class="forward">前</span></div>
+            <p class="hint">拖动圆点控制前后与横移</p>
+          </div>
+          <div class="rotation">
+            <label for="motionSpeed">整车速度倍率 <output id="motionSpeedValue">25%</output></label>
+            <input id="motionSpeed" type="range" min="5" max="100" value="25" step="5">
+            <label for="rotation">旋转速度 <output id="rotationValue">0.00</output></label>
+            <input id="rotation" type="range" min="-100" max="100" value="0">
+            <div class="command-readout"><span>vx <b id="vx">0.00</b></span><span>vy <b id="vy">0.00</b></span><span>wz <b id="wz">0.00</b></span></div>
+            <div class="preset-grid" aria-label="整车动作预设">
+              <button class="ghost small motion-preset" data-vx="1" data-vy="0" data-wz="0">前进</button>
+              <button class="ghost small motion-preset" data-vx="-1" data-vy="0" data-wz="0">后退</button>
+              <button class="ghost small motion-preset" data-vx="0" data-vy="1" data-wz="0">左横移</button>
+              <button class="ghost small motion-preset" data-vx="0" data-vy="-1" data-wz="0">右横移</button>
+              <button class="ghost small motion-preset" data-vx="0.707" data-vy="0.707" data-wz="0">左前斜行</button>
+              <button class="ghost small motion-preset" data-vx="0.707" data-vy="-0.707" data-wz="0">右前斜行</button>
+              <button class="ghost small motion-preset" data-vx="0" data-vy="0" data-wz="1">原地左旋</button>
+              <button class="ghost small motion-preset" data-vx="0" data-vy="0" data-wz="-1">原地右旋</button>
+              <button class="ghost small motion-preset" data-vx="0" data-vy="0" data-wz="0">停车并保持轮向</button>
+            </div>
+            <p class="hint">动作按钮单击即执行；切换按钮可直接换动作，再点当前按钮或“停车并保持轮向”立即停止。控制器会先转向，全部对准后才启动行走轮。</p>
+            <button id="deadman" class="deadman" disabled>点击启用整车控制</button>
+          </div>
+        </div>
+        <p class="warning">动作按钮会单击启动并持续运行；再次点击、停车按钮、立即停车、页面失焦或网页断连都会停止。实体急停、架空测试和现场监护仍然必需。</p>
+      </article>
+    </section>
+    </div>
+
+    <div class="page" data-page-panel="maintenance">
+    <section class="panel maintenance-panel">
+      <div class="section-title">
+        <div><p class="eyebrow">MAINTENANCE</p><h2>单轮维护调试</h2></div>
+        <span id="modeBadge" class="badge">DISABLED</span>
+      </div>
+      <div class="mode-row">
+        <button id="modeDisabled" class="ghost">停机配置</button>
+        <button id="modeMaintenance" class="secondary">进入维护模式</button>
+        <button id="modeNormal" class="ghost">正常整车模式</button>
+      </div>
+      <div class="maintenance-grid">
+        <label>选择轮组<select id="maintenanceWheel"></select></label>
+        <label>目标轮速 rpm<input id="maintenanceRpm" type="number" value="0" step="1"></label>
+        <label>转角方式<select id="maintenanceAngleMode"><option value="absolute">绝对实际目标角</option><option value="relative">相对当前角</option></select></label>
+        <label><span id="maintenanceAngleLabel">绝对目标角 °</span><input id="maintenanceAngle" type="number" value="0" step="0.5" min="-90" max="90"></label>
+        <button id="maintenanceDeadman" class="deadman" disabled>按住执行转角/轮速</button>
+      </div>
+      <div id="wheelFeedback" class="pose"><span>实际转角 —</span><span>实际轮速 —</span><span>命令 —</span></div>
+      <p id="maintenanceNotice" class="hint">绝对目标角以标定零位为 0°；超出范围会自动修正到最近机械限位。</p>
+      <div class="zero-calibration">
+        <div><strong>机械零位标定</strong><p class="hint">手动把所选轮调整到正前方，然后只读绝对编码器并预览新零偏。</p></div>
+        <button id="readZero" class="ghost">读取并预览零位</button>
+        <button id="saveZero" class="secondary" disabled>确认机械朝前并保存</button>
+      </div>
+      <p id="zeroPreview" class="hint">尚未读取。整个流程不会发送电机使能、运动或内部设零命令。</p>
+      <p class="warning">必须架空轮子。网页会自动切换控制器；四轮转向反馈超时、缺失、非有限值或跳变时拒绝维护运动。</p>
+    </section>
+    </div>
+
+    <div class="page" data-page-panel="settings">
+    <section class="panel chassis-panel">
+      <div class="section-title">
+        <div><p class="eyebrow">CHASSIS CONFIG</p><h2>CAN 与四轮硬件配置</h2></div>
+        <button id="saveChassis" class="secondary">校验并保存</button>
+      </div>
+      <form id="chassisForm">
+        <div class="config-grid bus-config">
+          <label>转向 CAN 口<input name="steering_interface"></label>
+          <label>转向波特率<input name="steering_bitrate" type="number"></label>
+          <label>行走 CAN 口<input name="drive_interface"></label>
+          <label>行走波特率<input name="drive_bitrate" type="number"></label>
+          <label>轮胎半径 m<input name="wheel_radius" type="number" step="0.001"></label>
+          <label>轮胎宽度 m<input name="wheel_width" type="number" step="0.001"></label>
+          <label>转向轴到轮心偏置 m<input name="wheel_center_offset" type="number" step="0.001"></label>
+          <label>轴距 m<input name="wheelbase" type="number" step="0.001"></label>
+          <label>轮距 m<input name="track_width" type="number" step="0.001"></label>
+          <label>车体长度 m<input name="body_length" type="number" step="0.001"></label>
+          <label>车体宽度 m<input name="body_width" type="number" step="0.001"></label>
+          <label>导航轮廓余量 m<input name="footprint_padding" type="number" step="0.005"></label>
+          <label>整车最大轮角速度 rad/s<input name="max_wheel_angular_velocity" type="number" step="0.1"></label>
+          <label>整车最大轮角加速度 rad/s²<input name="max_wheel_angular_acceleration" type="number" step="0.5"></label>
+          <label>转向单侧机械限位 °（≤90）<input name="steering_limit_deg" type="number" step="1" min="1" max="90"></label>
+          <label>行走放行转向误差 °<input name="drive_alignment_tolerance_deg" type="number" step="0.5" min="1" max="45"></label>
+          <label>整车命令超时 s<input name="controller_command_timeout" type="number" step="0.05"></label>
+          <label>维护最大转速 rpm<input name="maintenance_max_rpm" type="number" step="1"></label>
+          <label>维护最大转角 °<input name="maintenance_max_steering_angle_deg" type="number" step="1"></label>
+          <label>单次相对转角上限 °（≤360）<input name="maintenance_max_steering_step_deg" type="number" step="1" min="1" max="360"></label>
+        </div>
+        <div id="wheelConfigs" class="wheel-configs"></div>
+      </form>
+      <p id="chassisNotice" class="hint">只有 DISABLED 模式允许保存。保存会生成历史备份，重启底盘硬件后生效。</p>
+    </section>
+
+    <section class="settings-lower">
+      <article class="panel">
+        <div class="section-title"><div><p class="eyebrow">CONFIGURATION</p><h2>运行配置</h2></div><button id="saveConfig" class="secondary">保存</button></div>
+        <form id="configForm" class="config-grid">
+          <label>最大前后速度 m/s<input name="max_linear_x" type="number" step="0.01" min="0.01"></label>
+          <label>最大横移速度 m/s<input name="max_linear_y" type="number" step="0.01" min="0.01"></label>
+          <label>最大角速度 rad/s<input name="max_angular_z" type="number" step="0.01" min="0.01"></label>
+        </form>
+        <p id="configNotice" class="hint">整车网页遥控限值保存后立即用于新指令。</p>
+      </article>
+    </section>
+    </div>
+  </main>
+  <footer>Mobile Base Web Console · 调试用途</footer>
+  <script src="/app.js?v=15"></script>
+</body>
+</html>

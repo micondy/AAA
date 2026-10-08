@@ -1,0 +1,25 @@
+color_depth_detector:
+  ros__parameters:
+    color_topic: /sensors/nav_camera/color/image_raw
+    depth_topic: /sensors/nav_camera/aligned_depth_to_color/image_raw
+    camera_info_topic: /sensors/nav_camera/color/camera_info
+    detections_3d_topic: /target_perception/detections_3d
+    detections_2d_topic: /target_perception/detections_2d
+    target_pose_topic: /target_perception/target_pose
+    metrics_topic: /target_perception/metrics
+    debug_mask_topic: /target_perception/debug/mask
+    output_frame: base_link
+    target_id: green_target_0
+    class_id: green_target
+    hsv_lower: [35, 80, 50]
+    hsv_upper: [90, 255, 255]
+    morphology_kernel: 5
+    min_contour_area: 200.0
+    min_depth_points: 40
+    min_depth_m: 0.20
+    max_depth_m: 3.0
+    depth_scale_16u: 0.001
+    sync_queue_size: 10
+    sync_slop_s: 0.05
+    transform_timeout_s: 0.10
+    publish_debug_mask: true

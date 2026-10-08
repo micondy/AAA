@@ -1,0 +1,7 @@
+image: isaac_carter_loop_right_20260912.pgm
+mode: trinary
+resolution: 0.050
+origin: [-7.128, -7.800, 0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196

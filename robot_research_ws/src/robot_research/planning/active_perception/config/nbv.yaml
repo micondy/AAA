@@ -1,0 +1,37 @@
+nbv_planner:
+  ros__parameters:
+    target_detection_topic: /active_perception/selected_target_detection
+    target_belief_topic: /active_perception/target_belief
+    target_id_topic: /active_perception/selected_target_id
+    map_topic: /map
+    camera_info_topic: /sensors/nav_camera/color/camera_info
+    best_pose_topic: /active_perception/best_view_pose
+    candidate_poses_topic: /active_perception/candidate_view_poses
+    markers_topic: /active_perception/candidate_view_markers
+    diagnostics_topic: /active_perception/nbv_diagnostics
+    compute_path_action: /compute_path_to_pose
+    map_frame: map
+    base_frame: base_link
+    camera_frame: nav_camera_color_optical_frame
+    # Keep the observed target outside the navigation FrontStop polygon
+    # (0.70 m forward) with margin for target extent and depth noise.
+    radii_m: [1.2, 1.4, 1.6]
+    samples_per_ring: 12
+    robot_radius_m: 0.32
+    safety_margin_m: 0.08
+    occupied_threshold: 50
+    unknown_is_occupied: true
+    target_ray_exclusion_m: 0.15
+    desired_clearance_m: 0.60
+    max_path_length_m: 5.0
+    planner_id: GridBased
+    action_server_timeout_seconds: 1.0
+    # One stuck Nav2 request must not block the complete candidate batch.
+    path_query_timeout_seconds: 8.0
+    # FrontStop reaches 0.70 m ahead; keep the whole path, not only its goal,
+    # away from the observed target with target/noise/localization margin.
+    minimum_path_target_clearance_m: 1.1
+    # If already inside 1.1 m, permit only paths that do not approach the
+    # target by more than this small localization/depth-noise tolerance.
+    path_clearance_start_tolerance_m: 0.05
+    transform_timeout_seconds: 0.2

@@ -1,0 +1,27 @@
+subscribe_rgbd: true
+subscribe_rgb: false
+subscribe_depth: false
+subscribe_odom_info: true
+publish_tf: true
+approx_sync: false
+wait_for_transform: 0.2
+topic_queue_size: 30
+sync_queue_size: 30
+qos_image: 2
+# rgbd_odometry uses sensor-data / best-effort QoS (2) for odom and odom_info.
+# Matching it here is required; reliable subscribers cannot connect to a
+# best-effort publisher.
+qos_odom: 2
+Mem/UseOdomFeatures: "true"
+# Keep map->odom and graph optimization compatible with Nav2's planar costmaps.
+Reg/Force3DoF: "true"
+Optimizer/Slam2D: "true"
+RGBD/CreateOccupancyGrid: "true"
+RGBD/ProximityBySpace: "true"
+RGBD/LinearUpdate: "0.05"
+RGBD/AngularUpdate: "0.05"
+Grid/FromDepth: "true"
+Grid/3D: "false"
+Grid/CellSize: "0.05"
+Grid/RangeMax: "5.0"
+Rtabmap/DetectionRate: "2.0"

@@ -1,0 +1,13 @@
+frame_id: map
+map_database: maps/isaac_indoor_external_odom_04.db
+selection:
+  map_resolution_m: 0.05
+  route_extent_m: 0.5
+  note: >-
+    Compact four-point acceptance route selected on the measured mapping loop.
+    Verify the map/costmap overlays in RViz before execution.
+waypoints:
+  - {name: E01_east, x: 0.32, y: -0.02, yaw: 0.0}
+  - {name: E02_southeast, x: 0.40, y: -0.34, yaw: -1.571}
+  - {name: E03_southwest, x: 0.06, y: -0.40, yaw: 3.142}
+  - {name: E04_return, x: 0.00, y: -0.06, yaw: 1.571}

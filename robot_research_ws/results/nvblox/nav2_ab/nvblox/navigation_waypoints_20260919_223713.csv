@@ -1,0 +1,5 @@
+name,x,y,yaw,status,error_code,duration_s,distance_remaining_m,recoveries
+E01_east,0.32,-0.02,0.0,SUCCEEDED,0,0.784,0.2648521065711975,0
+E02_southeast,0.4,-0.34,-1.571,SUCCEEDED,0,12.391,0.2327755093574524,0
+E03_southwest,0.06,-0.4,3.142,SUCCEEDED,0,14.981,0.5169588327407837,0
+E04_return,0.0,-0.06,1.571,SUCCEEDED,0,17.111,0.3103247582912445,0

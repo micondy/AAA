@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<library path="swerve_controller_plugin">
+  <class name="mobile_base_swerve_controller/SwerveController"
+         type="mobile_base::SwerveController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>四轮独立转向运动学控制器。</description>
+  </class>
+</library>

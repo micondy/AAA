@@ -1,0 +1,35 @@
+[
+  {
+    "name": "P01_southwest",
+    "x": -2.355,
+    "y": 2.539,
+    "yaw": 1.012,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 89.919,
+    "distance_remaining_m": 0.14778250455856323,
+    "recoveries": 4
+  },
+  {
+    "name": "P02_west_mid",
+    "x": -1.855,
+    "y": 3.339,
+    "yaw": 0.748,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 8.714,
+    "distance_remaining_m": 0.10596490651369095,
+    "recoveries": 0
+  },
+  {
+    "name": "P03_center_south",
+    "x": -1.155,
+    "y": 3.989,
+    "yaw": -0.983,
+    "status": "TIMEOUT",
+    "error_code": -1,
+    "duration_s": 120.001,
+    "distance_remaining_m": 0.13096491992473602,
+    "recoveries": 6
+  }
+]

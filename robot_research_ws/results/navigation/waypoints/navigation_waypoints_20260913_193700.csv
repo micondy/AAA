@@ -1,0 +1,3 @@
+name,x,y,yaw,status,error_code,duration_s,distance_remaining_m,recoveries
+P01_southwest,-2.355,2.539,1.012,SUCCEEDED,0,39.381,0.23096491396427155,1
+P02_west_mid,-1.855,3.339,0.748,SUCCEEDED,0,6.051,0.20596501231193542,0

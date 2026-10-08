@@ -1,0 +1,54 @@
+# Isaac baseline profile.  Keep the hardware defaults in nav2.yaml conservative,
+# but model the simulated 0.62 x 0.58 m chassis closely enough that narrow,
+# genuinely traversable gaps are not discarded by an oversized footprint.
+controller_server:
+  ros__parameters:
+    FollowPath:
+      desired_linear_vel: 0.35
+      min_approach_linear_velocity: 0.10
+      rotate_to_heading_angular_vel: 0.60
+      max_angular_accel: 1.20
+      # Keep the controller's cost lookup inside the simulation inflation band.
+      cost_scaling_dist: 0.10
+
+velocity_smoother:
+  ros__parameters:
+    max_velocity: [0.45, 0.0, 0.80]
+    min_velocity: [-0.15, 0.0, -0.80]
+    max_accel: [0.70, 0.0, 1.20]
+    max_decel: [-0.70, 0.0, -1.20]
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      footprint: "[[0.33, 0.31], [0.33, -0.31], [-0.33, -0.31], [-0.33, 0.31]]"
+      footprint_padding: 0.02
+      voxel_layer:
+        front_depth:
+          # Reject simulated floor/depth speckle without hiding normal curbs.
+          min_obstacle_height: 0.10
+      inflation_layer:
+        inflation_radius: 0.10
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      footprint: "[[0.33, 0.31], [0.33, -0.31], [-0.33, -0.31], [-0.33, 0.31]]"
+      footprint_padding: 0.02
+      obstacle_layer:
+        front_depth:
+          min_obstacle_height: 0.10
+      inflation_layer:
+        inflation_radius: 0.10
+
+collision_monitor:
+  ros__parameters:
+    FrontStop:
+      # Simulation depth contains ground speckle near the chassis.  Begin the
+      # stop zone just beyond the padded 0.35 m nose and keep a useful 0.50 m
+      # emergency look-ahead without treating the robot itself as an obstacle.
+      points: "[[0.85, 0.32], [0.85, -0.32], [0.38, -0.32], [0.38, 0.32]]"
+      enabled: false
+    front_depth:
+      min_height: 0.10
+      enabled: false

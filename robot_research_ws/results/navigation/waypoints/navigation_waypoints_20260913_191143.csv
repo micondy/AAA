@@ -1,0 +1,2 @@
+name,x,y,yaw,status,error_code,duration_s,distance_remaining_m,recoveries
+P02_west_mid,-1.855,3.339,0.748,ABORTED,103,6.051,0.5181078910827637,0

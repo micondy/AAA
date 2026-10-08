@@ -1,0 +1,14 @@
+.maintenance-panel,.chassis-panel{padding:24px;margin-top:14px}
+.mode-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.maintenance-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1.2fr;gap:12px;align-items:end}
+.maintenance-grid label,.wheel-card label{font-size:12px;color:var(--muted)}
+select,.maintenance-grid input,.wheel-card input,.wheel-card select{width:100%;margin-top:6px;background:#091310;border:1px solid var(--line);border-radius:8px;padding:10px;color:var(--text)}
+.wheel-configs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.wheel-card{border:1px solid var(--line);border-radius:13px;padding:16px;background:#09131088}
+.wheel-card h3{margin:0 0 12px}.wheel-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bus-config{padding-bottom:18px;border-bottom:1px solid var(--line)}
+.preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.motion-preset.active{color:#07120e;border-color:var(--green);background:var(--green);box-shadow:0 0 0 3px #77e2a81c}
+.zero-calibration{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;margin-top:18px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#09131088}.zero-calibration p{margin:4px 0 0;text-align:left}
+@media(max-width:850px){.maintenance-grid{grid-template-columns:1fr 1fr}.wheel-configs{grid-template-columns:1fr}.wheel-fields{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.maintenance-grid,.wheel-fields,.zero-calibration{grid-template-columns:1fr}}

@@ -1,0 +1,12 @@
+{
+  "distances_m": [
+    0.4,
+    0.6,
+    0.8,
+    1.0
+  ],
+  "samples_per_distance": 100,
+  "warmup_frames_per_distance": 15,
+  "stage_duration_s": 30.0,
+  "distance_definition": "camera optical center to visible front surface"
+}

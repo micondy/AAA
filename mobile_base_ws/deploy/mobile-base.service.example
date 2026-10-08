@@ -1,0 +1,20 @@
+[Unit]
+Description=Mobile Base ROS 2 Chassis and Web Console
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 安装时把 User、Group 和 /opt/mobile_base_ws 改成目标机的实际值。
+User=robot
+Group=robot
+WorkingDirectory=/opt/mobile_base_ws
+EnvironmentFile=/etc/mobile_base/mobile_base.env
+ExecStart=/bin/bash /opt/mobile_base_ws/deploy/run_robot.sh
+KillSignal=SIGINT
+TimeoutStopSec=15
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

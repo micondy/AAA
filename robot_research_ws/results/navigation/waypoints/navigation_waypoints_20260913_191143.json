@@ -1,0 +1,13 @@
+[
+  {
+    "name": "P02_west_mid",
+    "x": -1.855,
+    "y": 3.339,
+    "yaw": 0.748,
+    "status": "ABORTED",
+    "error_code": 103,
+    "duration_s": 6.051,
+    "distance_remaining_m": 0.5181078910827637,
+    "recoveries": 0
+  }
+]

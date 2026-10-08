@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mobile_manipulator">
+  <!-- Reuse Enactic's official groups, end effectors, named states and collision matrix. -->
+  <xacro:include filename="$(find openarm_bimanual_moveit_config)/config/openarm_bimanual.srdf"/>
+
+  <!-- Stage 1 plans both arms while Nav2 owns base motion. -->
+  <virtual_joint name="world_joint" type="fixed" parent_frame="world" child_link="base_link"/>
+
+  <!-- Added integration links from the custom mobile base. -->
+  <disable_collisions link1="base_link" link2="openarm_mount_link" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="openarm_mount_link" reason="Adjacent"/>
+  <disable_collisions link1="openarm_mount_link" link2="openarm_body_link0" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="front_left_steer_link" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="front_right_steer_link" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="rear_left_steer_link" reason="Adjacent"/>
+  <disable_collisions link1="base_link" link2="rear_right_steer_link" reason="Adjacent"/>
+  <disable_collisions link1="front_left_steer_link" link2="front_left_wheel_link" reason="Adjacent"/>
+  <disable_collisions link1="front_right_steer_link" link2="front_right_wheel_link" reason="Adjacent"/>
+  <disable_collisions link1="rear_left_steer_link" link2="rear_left_wheel_link" reason="Adjacent"/>
+  <disable_collisions link1="rear_right_steer_link" link2="rear_right_wheel_link" reason="Adjacent"/>
+</robot>

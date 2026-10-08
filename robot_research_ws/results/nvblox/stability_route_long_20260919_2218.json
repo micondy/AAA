@@ -1,0 +1,19 @@
+{
+  "status": "failed",
+  "failure_reason": "Segment 3 timed out",
+  "route": {
+    "long_edge_m": 1.0,
+    "short_edge_m": 0.7,
+    "linear_speed_mps": 0.15,
+    "angular_speed_radps": 0.35,
+    "turn_direction": "left",
+    "command_topic": "/cmd_vel",
+    "ground_truth_topic": "/sim/ground_truth/odom",
+    "estimate_topic": "/swerve_controller/odom"
+  },
+  "sample_count": 2850,
+  "ground_truth_path_length_m": 1.5652921755703397,
+  "rtabmap_path_length_m": 1.565291935296335,
+  "ground_truth_closure_translation_m": null,
+  "rtabmap_closure_translation_m": null
+}

@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mobile_manipulator">
+  <!--
+    The base and arm descriptions remain owned by their upstream packages.
+    This file is intentionally only the mechanical integration boundary.
+  -->
+  <xacro:arg name="openarm_mount_xyz" default="0 0 0.18"/>
+  <xacro:arg name="openarm_mount_rpy" default="0 0 0"/>
+  <xacro:arg name="openarm_ros2_control" default="false"/>
+  <xacro:arg name="openarm_use_fake_hardware" default="true"/>
+  <!--
+    Provisional forward perception camera mount.  The real bracket has not been
+    measured yet, so keep the pose at this integration boundary rather than in
+    the upstream base or RealSense packages.
+
+    On hardware, realsense2_camera publishes the calibrated internal camera
+    frames.  Therefore nominal internal frames are disabled by default here;
+    simulation may enable them explicitly.
+  -->
+  <xacro:arg name="nav_camera_enabled" default="true"/>
+  <xacro:arg name="nav_camera_mount_xyz" default="0.10 0 1.12"/>
+  <xacro:arg name="nav_camera_mount_rpy" default="0 0.20944 0"/>
+  <xacro:arg name="nav_camera_use_nominal_extrinsics" default="false"/>
+  <!-- Required as global substitutions by parts of the upstream hand macro. -->
+  <xacro:arg name="hand" default="true"/>
+  <xacro:arg name="ee_type" default="openarm_hand"/>
+
+  <!-- The included base file also exposes use_mock_hardware and chassis args. -->
+  <xacro:include filename="$(find mobile_base_description)/urdf/mobile_base.urdf.xacro"/>
+  <xacro:include filename="$(find openarm_description)/urdf/robot/openarm_robot.xacro"/>
+  <xacro:include filename="$(find realsense2_description)/urdf/_d435i.urdf.xacro"/>
+
+  <xacro:if value="$(arg nav_camera_enabled)">
+    <xacro:sensor_d435i
+      parent="base_link"
+      name="nav_camera"
+      use_nominal_extrinsics="$(arg nav_camera_use_nominal_extrinsics)">
+      <origin xyz="$(arg nav_camera_mount_xyz)" rpy="$(arg nav_camera_mount_rpy)"/>
+    </xacro:sensor_d435i>
+  </xacro:if>
+
+  <material name="mount_gray">
+    <color rgba="0.32 0.34 0.38 1.0"/>
+  </material>
+
+  <!-- Temporary CAD-independent adapter. Replace its dimensions after measurement. -->
+  <link name="openarm_mount_link">
+    <inertial>
+      <origin xyz="0 0 0.02" rpy="0 0 0"/>
+      <mass value="2.0"/>
+      <inertia ixx="0.0107" ixy="0" ixz="0" iyy="0.0107" iyz="0" izz="0.0208"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.02" rpy="0 0 0"/>
+      <geometry><box size="0.25 0.25 0.04"/></geometry>
+      <material name="mount_gray"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.02" rpy="0 0 0"/>
+      <geometry><box size="0.25 0.25 0.04"/></geometry>
+    </collision>
+  </link>
+
+  <joint name="base_to_openarm_mount" type="fixed">
+    <parent link="base_link"/>
+    <child link="openarm_mount_link"/>
+    <origin xyz="$(arg openarm_mount_xyz)" rpy="$(arg openarm_mount_rpy)"/>
+  </joint>
+
+  <!--
+    The upstream body macro creates its parent link itself when connected_to is
+    non-empty.  Keep it empty and own this joint here so the adapter can carry
+    real geometry and inertia without producing a duplicate link name.
+  -->
+  <joint name="openarm_mount_to_body" type="fixed">
+    <parent link="openarm_mount_link"/>
+    <child link="openarm_body_link0"/>
+    <origin xyz="0 0 0.04" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:openarm_robot
+    arm_type="v10"
+    body_type="v10"
+    joint_limits="${xacro.load_yaml('$(find openarm_description)/config/arm/v10/joint_limits.yaml')}"
+    control_gains="${xacro.load_yaml('$(find openarm_description)/config/arm/v10/control_gains.yaml')}"
+    inertials="${xacro.load_yaml('$(find openarm_description)/config/arm/v10/inertials.yaml')}"
+    kinematics="${xacro.load_yaml('$(find openarm_description)/config/arm/v10/kinematics.yaml')}"
+    kinematics_link="${xacro.load_yaml('$(find openarm_description)/config/arm/v10/kinematics_link.yaml')}"
+    kinematics_offset="${xacro.load_yaml('$(find openarm_description)/config/arm/v10/kinematics_offset.yaml')}"
+    body_inertials="${xacro.load_yaml('$(find openarm_description)/config/body/v10/inertials.yaml')}"
+    body_kinematics="${xacro.load_yaml('$(find openarm_description)/config/body/v10/kinematics.yaml')}"
+    body_kinematics_link="${xacro.load_yaml('$(find openarm_description)/config/body/v10/kinematics.yaml')}"
+    ee_kinematics_link="${xacro.load_yaml('$(find openarm_description)/config/hand/openarm_hand/kinematics_link.yaml')}"
+    hand="$(arg hand)"
+    ee_type="$(arg ee_type)"
+    ros2_control="$(arg openarm_ros2_control)"
+    use_fake_hardware="$(arg openarm_use_fake_hardware)"
+    fake_sensor_commands="false"
+    no_prefix="false"
+    arm_prefix=""
+    body_prefix=""
+    arm_connected_to="base"
+    body_connected_to=""
+    bimanual="true"
+    right_arm_base_xyz="0 -0.031 0.698"
+    left_arm_base_xyz="0 0.031 0.698"
+    right_arm_base_rpy="1.5708 0 0"
+    left_arm_base_rpy="-1.5708 0 0"
+    left_can_interface="can1"
+    right_can_interface="can0"
+    left_arm_prefix="left_"
+    right_arm_prefix="right_"
+    can_fd="true"/>
+</robot>

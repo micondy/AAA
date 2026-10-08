@@ -1,0 +1,60 @@
+/camera/camera/color/image_raw:
+  reliability: best_effort
+  durability: volatile
+  history: keep_last
+  depth: 10
+/camera/camera/aligned_depth_to_color/image_raw:
+  reliability: best_effort
+  durability: volatile
+  history: keep_last
+  depth: 10
+/camera/camera/depth/image_rect_raw:
+  reliability: best_effort
+  durability: volatile
+  history: keep_last
+  depth: 10
+/camera/camera/imu:
+  reliability: best_effort
+  durability: volatile
+  history: keep_last
+  depth: 100
+/camera/camera/gyro/sample:
+  reliability: best_effort
+  durability: volatile
+  history: keep_last
+  depth: 100
+/camera/camera/accel/sample:
+  reliability: best_effort
+  durability: volatile
+  history: keep_last
+  depth: 100
+/camera/camera/color/camera_info:
+  reliability: reliable
+  durability: volatile
+  history: keep_last
+  depth: 10
+/camera/camera/aligned_depth_to_color/camera_info:
+  reliability: reliable
+  durability: volatile
+  history: keep_last
+  depth: 10
+/camera/camera/depth/camera_info:
+  reliability: reliable
+  durability: volatile
+  history: keep_last
+  depth: 10
+/diagnostics:
+  reliability: reliable
+  durability: volatile
+  history: keep_last
+  depth: 10
+/tf:
+  reliability: reliable
+  durability: volatile
+  history: keep_last
+  depth: 10
+/tf_static:
+  reliability: reliable
+  durability: transient_local
+  history: keep_last
+  depth: 10

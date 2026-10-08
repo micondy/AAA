@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-21T02:50:26.958197+00:00",
+  "profile": "nvblox_esdf_local_costmap",
+  "passed": true,
+  "roi_base_m": {
+    "x_min": 0.3,
+    "x_max": 1.2,
+    "abs_y_max": 0.55
+  },
+  "baseline": {
+    "samples": 504,
+    "median_lethal_cells": 30.0,
+    "max_lethal_cells": 30,
+    "last_lethal_cells": 30
+  },
+  "obstacles": [
+    {
+      "obstacle_type": "low",
+      "occupied": {
+        "samples": 254,
+        "median_lethal_cells": 30.0,
+        "max_lethal_cells": 185,
+        "last_lethal_cells": 185
+      },
+      "cleared": {
+        "samples": 504,
+        "median_lethal_cells": 30.0,
+        "max_lethal_cells": 185,
+        "last_lethal_cells": 30
+      },
+      "added_lethal_cells": 155.0,
+      "removal_residual_cells": 0.0,
+      "mark_passed": true,
+      "clear_passed": true,
+      "passed": true
+    },
+    {
+      "obstacle_type": "hanging",
+      "occupied": {
+        "samples": 254,
+        "median_lethal_cells": 396.0,
+        "max_lethal_cells": 396,
+        "last_lethal_cells": 396
+      },
+      "cleared": {
+        "samples": 504,
+        "median_lethal_cells": 30.0,
+        "max_lethal_cells": 396,
+        "last_lethal_cells": 30
+      },
+      "added_lethal_cells": 366.0,
+      "removal_residual_cells": 0.0,
+      "mark_passed": true,
+      "clear_passed": true,
+      "passed": true
+    },
+    {
+      "obstacle_type": "shelf",
+      "occupied": {
+        "samples": 254,
+        "median_lethal_cells": 395.0,
+        "max_lethal_cells": 395,
+        "last_lethal_cells": 395
+      },
+      "cleared": {
+        "samples": 505,
+        "median_lethal_cells": 30,
+        "max_lethal_cells": 395,
+        "last_lethal_cells": 30
+      },
+      "added_lethal_cells": 365.0,
+      "removal_residual_cells": 0.0,
+      "mark_passed": true,
+      "clear_passed": true,
+      "passed": true
+    }
+  ]
+}

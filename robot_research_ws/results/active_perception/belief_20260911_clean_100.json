@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "belief_frame": "base_link",
+    "truth_position_m": [
+      1.1006,
+      0.0,
+      0.4325
+    ],
+    "warmup_frames": 15
+  },
+  "metrics": {
+    "covariance_trace_reduction_ratio": 0.1341233565496468,
+    "final_covariance_trace_m2": 3.4822883510715534e-06,
+    "final_position_error_m": 0.0016600595880608786,
+    "initial_covariance_trace_m2": 4.021691054276853e-06,
+    "minimum_covariance_trace_m2": 3.4411677167522266e-06,
+    "position_error_rmse_m": 0.0016600127314992897,
+    "sample_count": 100
+  }
+}

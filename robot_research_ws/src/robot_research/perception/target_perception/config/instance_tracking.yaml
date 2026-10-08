@@ -1,0 +1,6 @@
+instance_tracking:
+  ros__parameters:
+    input_topic: /target_perception/detections_3d
+    output_topic: /target_perception/tracked_detections_3d
+    max_distance_m: 0.35
+    max_missed_frames: 5

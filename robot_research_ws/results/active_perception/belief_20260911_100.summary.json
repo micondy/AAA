@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "expected_frame": "base_link",
+    "truth_front_depth_m": 0.77,
+    "truth_position_m": [
+      1.1006,
+      0.0,
+      0.4325
+    ],
+    "truth_size_m": [
+      0.2,
+      0.2
+    ],
+    "warmup_frames": 15
+  },
+  "metrics": {
+    "samples": 100,
+    "detections": 100,
+    "failures": 0,
+    "detection_rate": 1.0,
+    "position_error_mean_m": 0.0016600598780211603,
+    "position_error_std_m": 0.0,
+    "position_error_rmse_m": 0.0016600598780211603,
+    "position_error_max_m": 0.0016600598780211603,
+    "bias_x_m": 0.00014982700347898614,
+    "bias_y_m": 0.0011303301508064148,
+    "bias_z_m": 0.0012065257634307214,
+    "size_error_x_mean_m": 0.0002832922301068963,
+    "size_error_y_mean_m": 0.0026963439437226455,
+    "valid_depth_ratio_mean": 0.97619,
+    "confidence_mean": 1.0
+  }
+}

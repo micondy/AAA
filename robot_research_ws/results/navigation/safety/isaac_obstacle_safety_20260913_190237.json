@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-13T10:02:37.213614+00:00",
+  "passed": true,
+  "pipeline": "Isaac RGB-D -> PointCloud2 -> collision_monitor",
+  "phases": [
+    {
+      "name": "clear_before",
+      "output_samples": 55,
+      "steady_samples": 36,
+      "steady_max_abs_output_mps": 0.15,
+      "last_output_mps": 0.15,
+      "states": [],
+      "front_stop_seen": false,
+      "passed": true
+    },
+    {
+      "name": "rendered_obstacle",
+      "output_samples": 21,
+      "steady_samples": 2,
+      "steady_max_abs_output_mps": 0.0,
+      "last_output_mps": 0.0,
+      "states": [
+        "1:FrontStop"
+      ],
+      "front_stop_seen": true,
+      "passed": true
+    },
+    {
+      "name": "cleared_after_removal",
+      "output_samples": 73,
+      "steady_samples": 56,
+      "steady_max_abs_output_mps": 0.15,
+      "last_output_mps": 0.15,
+      "states": [
+        "0:"
+      ],
+      "front_stop_seen": false,
+      "passed": true
+    }
+  ]
+}

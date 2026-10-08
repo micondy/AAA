@@ -1,0 +1,24 @@
+[
+  {
+    "name": "P01_southwest",
+    "x": -2.355,
+    "y": 2.539,
+    "yaw": 1.012,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 39.381,
+    "distance_remaining_m": 0.23096491396427155,
+    "recoveries": 1
+  },
+  {
+    "name": "P02_west_mid",
+    "x": -1.855,
+    "y": 3.339,
+    "yaw": 0.748,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 6.051,
+    "distance_remaining_m": 0.20596501231193542,
+    "recoveries": 0
+  }
+]

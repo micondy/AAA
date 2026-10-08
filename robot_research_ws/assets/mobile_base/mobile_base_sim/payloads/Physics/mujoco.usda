@@ -1,0 +1,220 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.3"
+    }
+    defaultPrim = "mobile_base"
+    doc = """Generated from Composed Stage of root layer /tmp/tmp54hkp7ys/mobile_base.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_mobile_base_sim_rm2cnsnd/usdex_mobile_base_sim/mobile_base.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_mobile_base_sim_rm2cnsnd/temp_mobile_base_sim/mobile_base_sim.usd
+
+
+Generated from Composed Stage of root layer /media/scc/Windows_D/AAA/robot_research_ws/assets/mobile_base/mobile_base_sim/payloads/base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    subLayers = [
+        @./physics.usda@
+    ]
+    upAxis = "Z"
+)
+
+over "mobile_base"
+{
+    over "Physics"
+    {
+        def MjcActuator "front_left_steer_joint_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            prepend rel mjc:target = </mobile_base/Physics/front_left_steer_joint>
+        }
+
+        def MjcActuator "front_left_drive_joint_actuator"
+        {
+            uniform double mjc:forceRange:max = inf
+            uniform double mjc:forceRange:min = -inf
+            custom rel mjc:target
+            prepend rel mjc:target = </mobile_base/Physics/front_left_drive_joint>
+        }
+
+        def MjcActuator "front_right_steer_joint_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            prepend rel mjc:target = </mobile_base/Physics/front_right_steer_joint>
+        }
+
+        def MjcActuator "front_right_drive_joint_actuator"
+        {
+            uniform double mjc:forceRange:max = inf
+            uniform double mjc:forceRange:min = -inf
+            custom rel mjc:target
+            prepend rel mjc:target = </mobile_base/Physics/front_right_drive_joint>
+        }
+
+        def MjcActuator "rear_left_steer_joint_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            prepend rel mjc:target = </mobile_base/Physics/rear_left_steer_joint>
+        }
+
+        def MjcActuator "rear_left_drive_joint_actuator"
+        {
+            uniform double mjc:forceRange:max = inf
+            uniform double mjc:forceRange:min = -inf
+            custom rel mjc:target
+            prepend rel mjc:target = </mobile_base/Physics/rear_left_drive_joint>
+        }
+
+        def MjcActuator "rear_right_steer_joint_actuator"
+        {
+            uniform double mjc:forceRange:max = 100
+            uniform double mjc:forceRange:min = -100
+            custom rel mjc:target
+            prepend rel mjc:target = </mobile_base/Physics/rear_right_steer_joint>
+        }
+
+        def MjcActuator "rear_right_drive_joint_actuator"
+        {
+            uniform double mjc:forceRange:max = inf
+            uniform double mjc:forceRange:min = -inf
+            custom rel mjc:target
+            prepend rel mjc:target = </mobile_base/Physics/rear_right_drive_joint>
+        }
+
+        over "front_left_steer_joint" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+        }
+
+        over "front_left_drive_joint" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+        }
+
+        over "front_right_steer_joint" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+        }
+
+        over "front_right_drive_joint" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+        }
+
+        over "rear_left_steer_joint" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+        }
+
+        over "rear_left_drive_joint" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+        }
+
+        over "rear_right_steer_joint" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+        }
+
+        over "rear_right_drive_joint" (
+            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+        )
+        {
+        }
+    }
+
+    over "Geometry"
+    {
+        over "base_link"
+        {
+            over "front_left_steer_link"
+            {
+                over "front_left_wheel_link"
+                {
+                    over "cylinder"
+                    {
+                    }
+                }
+
+                over "cylinder"
+                {
+                }
+            }
+
+            over "front_right_steer_link"
+            {
+                over "front_right_wheel_link"
+                {
+                    over "cylinder"
+                    {
+                    }
+                }
+
+                over "cylinder"
+                {
+                }
+            }
+
+            over "rear_left_steer_link"
+            {
+                over "rear_left_wheel_link"
+                {
+                    over "cylinder"
+                    {
+                    }
+                }
+
+                over "cylinder"
+                {
+                }
+            }
+
+            over "rear_right_steer_link"
+            {
+                over "rear_right_wheel_link"
+                {
+                    over "cylinder"
+                    {
+                    }
+                }
+
+                over "cylinder"
+                {
+                }
+            }
+
+            over "box"
+            {
+            }
+        }
+    }
+
+    over "Materials"
+    {
+        over "chassis_blue"
+        {
+        }
+
+        over "wheel_dark"
+        {
+        }
+    }
+}
+

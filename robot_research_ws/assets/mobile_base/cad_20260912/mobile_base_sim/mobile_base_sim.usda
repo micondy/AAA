@@ -1,0 +1,52 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.3"
+    }
+    defaultPrim = "mobile_base"
+    doc = """Generated from Composed Stage of root layer /tmp/tmpzsn7hwpl/mobile_base.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_mobile_base_sim_clom24e0/usdex_mobile_base_sim/mobile_base.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_mobile_base_sim_clom24e0/temp_mobile_base_sim/mobile_base_sim.usd
+
+
+Generated from Composed Stage of root layer /media/scc/Windows_D/AAA/robot_research_ws/assets/mobile_base/cad_20260912/mobile_base_sim/payloads/base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "mobile_base" (
+    prepend references = @./payloads/base.usda@
+    variants = {
+        string Physics = "physx"
+    }
+    append variantSets = "Physics"
+)
+{
+    variantSet "Physics" = {
+        "mujoco" (
+            prepend payload = @./payloads/Physics/mujoco.usda@
+        ) {
+
+        }
+        "none" {
+
+        }
+        "physics" (
+            prepend payload = @./payloads/Physics/physics.usda@
+        ) {
+
+        }
+        "physx" (
+            prepend payload = @./payloads/Physics/physx.usda@
+        ) {
+
+        }
+    }
+}
+

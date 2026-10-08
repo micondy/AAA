@@ -1,0 +1,17 @@
+frame_id: map
+map_database: maps/isaac_indoor_top_rt_01.db
+selection:
+  map_resolution_m: 0.05
+  minimum_map_clearance_m: 0.65
+  note: Generated from the connected free-space component; verify overlays in RViz before execution.
+waypoints:
+  - {name: P01_southwest, x: -2.355, y: 2.539, yaw: 1.012}
+  - {name: P02_west_mid, x: -1.855, y: 3.339, yaw: 0.748}
+  - {name: P03_center_south, x: -1.155, y: 3.989, yaw: 2.888}
+  - {name: P04_west_north, x: -2.505, y: 4.339, yaw: 0.956}
+  - {name: P05_northwest, x: -0.705, y: 6.889, yaw: -0.616}
+  - {name: P06_northeast, x: 0.495, y: 6.039, yaw: -2.275}
+  - {name: P07_center_north, x: -0.355, y: 5.039, yaw: -1.261}
+  - {name: P08_east_mid, x: 0.045, y: 3.789, yaw: -1.654}
+  - {name: P09_southeast, x: -0.055, y: 2.589, yaw: 2.316}
+  - {name: P10_south_center, x: -0.655, y: 3.239, yaw: -2.751}

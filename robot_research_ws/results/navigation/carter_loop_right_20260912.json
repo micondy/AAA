@@ -1,0 +1,16 @@
+{
+  "status": "completed",
+  "failure_reason": null,
+  "route": {
+    "long_edge_m": 1.0,
+    "short_edge_m": 0.7,
+    "linear_speed_mps": 0.1,
+    "angular_speed_radps": 0.22,
+    "turn_direction": "right"
+  },
+  "sample_count": 5446,
+  "ground_truth_path_length_m": 3.6051799340531963,
+  "rtabmap_path_length_m": 5.170075742613236,
+  "ground_truth_closure_translation_m": 0.0975547949400421,
+  "rtabmap_closure_translation_m": 0.04674411606539571
+}

@@ -1,0 +1,26 @@
+中菱电机，id号5，6（485win写入，要enter，断电，多试一试）
+中菱使用 can0、500 kbps
+left是通道1,right是通道2。
+| 轮组 | 节点 | 通道 |
+|---|---:|---:|
+| 左前 | 5 | 1 |
+| 右前 | 5 | 2 |
+| 左后 | 6 | 1 |
+| 右后 | 6 | 2 |
+
+
+sudo ip link set can0 down
+sudo ip link set can0 type can bitrate 500000 restart-ms 100
+sudo ip link set can0 txqueuelen 1000
+sudo ip link set can0 up
+
+达秒电机 0x01,0x11
+达妙使用 can1、1 Mbps
+
+sudo ip link set can1 down
+sudo ip link set can1 type can bitrate 1000000 restart-ms 100
+sudo ip link set can1 txqueuelen 1000
+sudo ip link set can1 up
+
+
+

@@ -1,0 +1,13 @@
+[
+  {
+    "name": "P01_southwest",
+    "x": -2.355,
+    "y": 2.539,
+    "yaw": 1.012,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 15.311,
+    "distance_remaining_m": 0.23096486926078796,
+    "recoveries": 0
+  }
+]

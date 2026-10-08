@@ -1,0 +1,45 @@
+{
+  "status": "PASS",
+  "duration_wall_s": 45.13309213299999,
+  "minimum_path_length_m": 0.8,
+  "path_length_m": 1.113039054771026,
+  "streams": {
+    "depth": {
+      "count": 426,
+      "rate_hz": 9.927100132061517
+    },
+    "mesh": {
+      "count": 167,
+      "rate_hz": 3.8773793182681966
+    },
+    "esdf_pointcloud": {
+      "count": 199,
+      "rate_hz": 4.637818607444668
+    },
+    "map_slice": {
+      "count": 199,
+      "rate_hz": 4.637797275470665
+    },
+    "odom": {
+      "count": 2562,
+      "rate_hz": 59.67906476587408
+    }
+  },
+  "map_content": {
+    "nonempty_mesh_messages": 84,
+    "max_mesh_blocks": 550,
+    "max_mesh_vertices": 25505,
+    "nonempty_esdf_clouds": 199,
+    "max_esdf_points": 11365,
+    "nonempty_slices": 199,
+    "max_slice_cells": 17920,
+    "max_observed_slice_cells": 11365
+  },
+  "checks": {
+    "depth_received": true,
+    "mesh_nonempty": true,
+    "esdf_cloud_nonempty": true,
+    "esdf_slice_observed": true,
+    "minimum_path_length": true
+  }
+}

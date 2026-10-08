@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-18T23:04:42.740865+09:00",
+  "status": "NAVIGATION_TIMEOUT",
+  "message": "navigation did not succeed",
+  "target_id": "green_target_0001",
+  "goal": {
+    "frame_id": "map",
+    "position": {
+      "x": 0.07232997473716707,
+      "y": 1.4212711531995925
+    },
+    "orientation": {
+      "z": -0.5000000000000002,
+      "w": 0.8660254037844385
+    }
+  },
+  "navigation_duration_seconds": 120.07216419699989,
+  "navigation_status": "CANCELED",
+  "navigation_error_code": 0,
+  "distance_remaining_m": 0.181232288479805,
+  "recoveries": 6,
+  "belief_change": null
+}

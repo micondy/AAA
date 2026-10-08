@@ -1,0 +1,249 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mobile_base">
+  <xacro:arg name="use_mock_hardware" default="false"/>
+  <xacro:arg name="dm_can_interface" default="can0"/>
+  <xacro:arg name="dm_can_fd" default="false"/>
+  <xacro:arg name="zlac_can_interface" default="can1"/>
+  <!--
+    Kinematic dimensions derived from chassis_4wis CAD (2026-09-12).
+    These are steering-axis locations, not the outer tyre envelope.
+    Measure the assembled chassis before final odometry calibration.
+  -->
+  <xacro:arg name="front_x" default="0.2095"/>
+  <xacro:arg name="rear_x" default="-0.2095"/>
+  <xacro:arg name="left_y" default="0.2250"/>
+  <xacro:arg name="right_y" default="-0.2250"/>
+  <xacro:arg name="wheel_radius" default="0.0855"/>
+  <xacro:arg name="use_cad_visuals" default="true"/>
+  <xacro:arg name="steering_limit_rad" default="1.5707963267948966"/>
+  <xacro:arg name="fl_motor_id" default="0x01"/><xacro:arg name="fl_master_id" default="0x11"/><xacro:arg name="fl_steer_direction" default="1"/><xacro:arg name="fl_offset" default="0"/>
+  <xacro:arg name="fr_motor_id" default="0x02"/><xacro:arg name="fr_master_id" default="0x12"/><xacro:arg name="fr_steer_direction" default="1"/><xacro:arg name="fr_offset" default="0"/>
+  <xacro:arg name="rl_motor_id" default="0x03"/><xacro:arg name="rl_master_id" default="0x13"/><xacro:arg name="rl_steer_direction" default="1"/><xacro:arg name="rl_offset" default="0"/>
+  <xacro:arg name="rr_motor_id" default="0x04"/><xacro:arg name="rr_master_id" default="0x14"/><xacro:arg name="rr_steer_direction" default="1"/><xacro:arg name="rr_offset" default="0"/>
+  <xacro:arg name="fl_steer_max_velocity" default="0.5"/><xacro:arg name="fr_steer_max_velocity" default="0.5"/>
+  <xacro:arg name="rl_steer_max_velocity" default="0.5"/><xacro:arg name="rr_steer_max_velocity" default="0.5"/>
+  <xacro:arg name="fl_node" default="1"/><xacro:arg name="fl_channel" default="1"/><xacro:arg name="fl_drive_direction" default="1"/><xacro:arg name="fl_gear_ratio" default="1"/><xacro:arg name="fl_max_rpm" default="1000"/>
+  <xacro:arg name="fr_node" default="1"/><xacro:arg name="fr_channel" default="2"/><xacro:arg name="fr_drive_direction" default="-1"/><xacro:arg name="fr_gear_ratio" default="1"/><xacro:arg name="fr_max_rpm" default="1000"/>
+  <xacro:arg name="rl_node" default="2"/><xacro:arg name="rl_channel" default="1"/><xacro:arg name="rl_drive_direction" default="1"/><xacro:arg name="rl_gear_ratio" default="1"/><xacro:arg name="rl_max_rpm" default="1000"/>
+  <xacro:arg name="rr_node" default="2"/><xacro:arg name="rr_channel" default="2"/><xacro:arg name="rr_drive_direction" default="-1"/><xacro:arg name="rr_gear_ratio" default="1"/><xacro:arg name="rr_max_rpm" default="1000"/>
+
+  <material name="chassis_blue">
+    <color rgba="0.12 0.32 0.72 1.0"/>
+  </material>
+  <material name="wheel_dark">
+    <color rgba="0.08 0.08 0.08 1.0"/>
+  </material>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="-0.00034 -0.00200 0.08816" rpy="0 0 0"/>
+      <mass value="4.6188"/>
+      <inertia ixx="0.036984" ixy="0" ixz="0" iyy="0.028019" iyz="0" izz="0.062335"/>
+    </inertial>
+    <xacro:if value="$(arg use_cad_visuals)">
+      <visual>
+        <!-- Recenter CAD and convert its X/Y/Z convention to REP-103. -->
+        <origin xyz="0.236324 1.3581995 0.043774" rpy="3.14159265 0 -1.57079633"/>
+        <geometry><mesh filename="package://mobile_base_description/meshes/chassis_4wis_cad/base_link.STL"/></geometry>
+        <material name="chassis_blue"/>
+      </visual>
+    </xacro:if>
+    <xacro:unless value="$(arg use_cad_visuals)">
+      <visual>
+        <origin xyz="0 0 0.0745" rpy="0 0 0"/>
+        <geometry><box size="0.620 0.580 0.197"/></geometry>
+        <material name="chassis_blue"/>
+      </visual>
+    </xacro:unless>
+    <!-- Deliberately simple: triangle-mesh collision is too costly for MoveIt/Isaac. -->
+    <collision>
+      <origin xyz="0 0 0.0745" rpy="0 0 0"/>
+      <geometry><box size="0.620 0.580 0.197"/></geometry>
+    </collision>
+  </link>
+
+  <xacro:macro name="swerve_module" params="name xyz wheel_y_offset steer_mesh steer_mesh_xyz steer_mesh_rpy wheel_mesh wheel_mesh_xyz wheel_mesh_rpy">
+    <link name="${name}_steer_link">
+      <inertial>
+        <origin xyz="0 0 0.04" rpy="0 0 0"/>
+        <mass value="0.11351"/>
+        <inertia ixx="0.000064" ixy="0" ixz="0" iyy="0.000064" iyz="0" izz="0.000044"/>
+      </inertial>
+      <xacro:if value="$(arg use_cad_visuals)">
+        <visual>
+          <origin xyz="${steer_mesh_xyz}" rpy="${steer_mesh_rpy}"/>
+          <geometry><mesh filename="package://mobile_base_description/meshes/chassis_4wis_cad/${steer_mesh}"/></geometry>
+          <material name="chassis_blue"/>
+        </visual>
+      </xacro:if>
+      <xacro:unless value="$(arg use_cad_visuals)">
+        <visual>
+          <origin xyz="0 0 0.04" rpy="0 0 0"/>
+          <geometry><cylinder radius="0.045" length="0.13"/></geometry>
+          <material name="chassis_blue"/>
+        </visual>
+      </xacro:unless>
+      <collision>
+        <origin xyz="0 0 0.04" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.045" length="0.13"/></geometry>
+      </collision>
+    </link>
+    <link name="${name}_wheel_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1.1612"/>
+        <inertia ixx="0.0022" ixy="0" ixz="0" iyy="0.0040" iyz="0" izz="0.0022"/>
+      </inertial>
+      <xacro:if value="$(arg use_cad_visuals)">
+        <visual>
+          <origin xyz="${wheel_mesh_xyz}" rpy="${wheel_mesh_rpy}"/>
+          <geometry><mesh filename="package://mobile_base_description/meshes/chassis_4wis_cad/${wheel_mesh}"/></geometry>
+          <material name="wheel_dark"/>
+        </visual>
+      </xacro:if>
+      <xacro:unless value="$(arg use_cad_visuals)">
+        <visual>
+          <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+          <geometry><cylinder radius="$(arg wheel_radius)" length="0.0683"/></geometry>
+          <material name="wheel_dark"/>
+        </visual>
+      </xacro:unless>
+      <collision>
+        <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>
+        <geometry><cylinder radius="$(arg wheel_radius)" length="0.0683"/></geometry>
+      </collision>
+    </link>
+    <joint name="${name}_steer_joint" type="revolute">
+      <parent link="base_link"/>
+      <child link="${name}_steer_link"/>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-${steering_limit_rad}" upper="${steering_limit_rad}" effort="100" velocity="0.5"/>
+    </joint>
+    <joint name="${name}_drive_joint" type="continuous">
+      <parent link="${name}_steer_link"/>
+      <child link="${name}_wheel_link"/>
+      <!-- CAD has an approximately 43 mm kingpin-to-wheel-centre offset. -->
+      <origin xyz="0 ${wheel_y_offset} 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:property name="steering_limit_rad" value="$(arg steering_limit_rad)"/>
+  <!-- The source export's front-left wheel joint is corrupt; its visual uses the equivalent left-rear wheel mesh. -->
+  <xacro:swerve_module name="front_left" xyz="$(arg front_x) $(arg left_y) 0" wheel_y_offset="0.0430"
+    steer_mesh="front_left_steer_link.STL" steer_mesh_xyz="0.026824 0.006400 0.040002" steer_mesh_rpy="-1.570793 0 0.000004"
+    wheel_mesh="rear_left_wheel_link.STL" wheel_mesh_xyz="0.117174 1.484790 0.000012" wheel_mesh_rpy="-2.090503 0 1.570789"/>
+  <xacro:swerve_module name="front_right" xyz="$(arg front_x) $(arg right_y) 0" wheel_y_offset="-0.0430"
+    steer_mesh="front_right_steer_link.STL" steer_mesh_xyz="0.026824 0 0.090002" steer_mesh_rpy="0.000007 0 -0.474296"
+    wheel_mesh="front_right_wheel_link.STL" wheel_mesh_xyz="0.115969 -1.484756 -0.000008" wheel_mesh_rpy="-2.090497 0.000007 -1.570796"/>
+  <xacro:swerve_module name="rear_left" xyz="$(arg rear_x) $(arg left_y) 0" wheel_y_offset="0.0430"
+    steer_mesh="rear_left_steer_link.STL" steer_mesh_xyz="0.046974 0 0.090002" steer_mesh_rpy="-0.000007 0 2.667289"
+    wheel_mesh="rear_left_wheel_link.STL" wheel_mesh_xyz="0.117174 1.484790 0.000012" wheel_mesh_rpy="-2.090503 0 1.570789"/>
+  <xacro:swerve_module name="rear_right" xyz="$(arg rear_x) $(arg right_y) 0" wheel_y_offset="-0.0430"
+    steer_mesh="rear_right_steer_link.STL" steer_mesh_xyz="0.046974 0 0.090002" steer_mesh_rpy="0.000007 0 -0.474296"
+    wheel_mesh="rear_right_wheel_link.STL" wheel_mesh_xyz="0.115922 -1.484729 -0.000008" wheel_mesh_rpy="-2.090497 0.000007 -1.570796"/>
+
+  <ros2_control name="mobile_base_system" type="system">
+    <hardware>
+      <xacro:if value="$(arg use_mock_hardware)">
+        <plugin>mock_components/GenericSystem</plugin>
+        <param name="calculate_dynamics">true</param>
+      </xacro:if>
+      <xacro:unless value="$(arg use_mock_hardware)">
+        <plugin>mobile_base_driver/SwerveHardware</plugin>
+        <param name="dm_can_interface">$(arg dm_can_interface)</param>
+        <param name="dm_can_fd">$(arg dm_can_fd)</param>
+        <param name="zlac_can_interface">$(arg zlac_can_interface)</param>
+        <param name="transaction_timeout_ms">100</param>
+        <!-- ZLAC's own 500 ms watchdog stops motion first. Allow up to 1 s for
+             intermittent SDO feedback jitter before ros2_control offlines the
+             complete hardware component. -->
+        <param name="state_timeout_ms">1000</param>
+
+        <!-- 任一 DM4340P 24V 的量程或输出轴绝对位置读取失败时，硬件配置必须失败。 -->
+        <param name="require_absolute_steering">true</param>
+
+        <!-- 下列 ZLAC 参数已按 V4 CANopen 通信说明 V1.01 核对。 -->
+        <param name="drive_acceleration">100</param>
+        <param name="drive_deceleration">100</param>
+        <!-- 0x2000 建议 200~1000 ms；500 ms 仅写运行参数，不写 EEPROM。 -->
+        <param name="drive_communication_watchdog_ms">500</param>
+        <param name="drive_diagnostic_period_ms">100</param>
+        <param name="zlac_communication_watchdog_index">0x2000</param>
+        <param name="zlac_synchronous_control_index">0x200F</param>
+        <param name="zlac_fault_code_index">0x603F</param>
+        <param name="zlac_controlword_index">0x6040</param>
+        <param name="zlac_statusword_index">0x6041</param>
+        <param name="zlac_mode_index">0x6060</param>
+        <param name="zlac_mode_display_index">0x6061</param>
+        <param name="zlac_target_velocity_index">0x60FF</param>
+        <param name="zlac_actual_velocity_index">0x606C</param>
+        <param name="zlac_acceleration_index">0x6083</param>
+        <param name="zlac_deceleration_index">0x6084</param>
+      </xacro:unless>
+    </hardware>
+
+    <!--
+      motor_id: 电机 ESC_ID；位置速度模式的发送 ID 为 0x100 + motor_id。
+      master_id: 电机 MST_ID；驱动只接受该 CAN ID 上的状态反馈。
+      两个值必须与达妙官方软件写入电机的值一致。
+    -->
+    <xacro:macro name="dm4340p_joint" params="name motor_id master_id command_velocity direction:=1.0 offset:=0.0">
+      <joint name="${name}_steer_joint">
+        <command_interface name="position">
+          <param name="min">-${steering_limit_rad}</param>
+          <param name="max">${steering_limit_rad}</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+        <param name="kind">steering</param>
+        <param name="motor_model">DM-J4340P-2EC-24V</param>
+        <param name="motor_id">${motor_id}</param>
+        <param name="master_id">${master_id}</param>
+        <param name="direction">${direction}</param>
+        <param name="offset_rad">${offset}</param>
+        <!-- xout(0x51) 是输出轴编码器直接测得的单圈绝对位置。 -->
+        <param name="use_absolute_output_encoder">true</param>
+        <param name="absolute_position_register">0x51</param>
+        <!-- 初次上机默认 0.5 rad/s；实际值由 chassis.yaml 为每个轮组配置。 -->
+        <param name="command_velocity_rad_s">${command_velocity}</param>
+      </joint>
+    </xacro:macro>
+
+    <xacro:macro name="zlac_joint" params="name node channel direction:=1.0 gear_ratio:=1.0 max_motor_rpm:=1000.0">
+      <joint name="${name}_drive_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+        <param name="kind">drive</param>
+        <param name="node_id">${node}</param>
+        <param name="channel">${channel}</param>
+        <param name="direction">${direction}</param>
+        <param name="gear_ratio">${gear_ratio}</param>
+        <param name="max_motor_rpm">${max_motor_rpm}</param>
+        <param name="command_units_per_rpm">1.0</param>
+        <param name="feedback_rpm_per_unit">0.1</param>
+      </joint>
+    </xacro:macro>
+
+    <!--
+      在这里填写四台电机通过官方软件设置的 ESC_ID 和 MST_ID。
+      下列独立 MST_ID 是推荐值；必须先将相同数值写入对应电机。
+      四台电机必须在上位机中预先设置 CTRL_MODE=2（位置速度模式）。
+      offset 是“车轮机械朝前”相对输出轴编码器零点的一次性标定值，掉电后无需重做。
+    -->
+    <xacro:dm4340p_joint name="front_left"  motor_id="$(arg fl_motor_id)" master_id="$(arg fl_master_id)" command_velocity="$(arg fl_steer_max_velocity)" direction="$(arg fl_steer_direction)" offset="$(arg fl_offset)"/>
+    <xacro:dm4340p_joint name="front_right" motor_id="$(arg fr_motor_id)" master_id="$(arg fr_master_id)" command_velocity="$(arg fr_steer_max_velocity)" direction="$(arg fr_steer_direction)" offset="$(arg fr_offset)"/>
+    <xacro:dm4340p_joint name="rear_left"   motor_id="$(arg rl_motor_id)" master_id="$(arg rl_master_id)" command_velocity="$(arg rl_steer_max_velocity)" direction="$(arg rl_steer_direction)" offset="$(arg rl_offset)"/>
+    <xacro:dm4340p_joint name="rear_right"  motor_id="$(arg rr_motor_id)" master_id="$(arg rr_master_id)" command_velocity="$(arg rr_steer_max_velocity)" direction="$(arg rr_steer_direction)" offset="$(arg rr_offset)"/>
+
+    <!-- 默认每根车轴使用一台双通道 ZLAC8015D；必须在底盘架空时核对方向。 -->
+    <xacro:zlac_joint name="front_left" node="$(arg fl_node)" channel="$(arg fl_channel)" direction="$(arg fl_drive_direction)" gear_ratio="$(arg fl_gear_ratio)" max_motor_rpm="$(arg fl_max_rpm)"/>
+    <xacro:zlac_joint name="front_right" node="$(arg fr_node)" channel="$(arg fr_channel)" direction="$(arg fr_drive_direction)" gear_ratio="$(arg fr_gear_ratio)" max_motor_rpm="$(arg fr_max_rpm)"/>
+    <xacro:zlac_joint name="rear_left" node="$(arg rl_node)" channel="$(arg rl_channel)" direction="$(arg rl_drive_direction)" gear_ratio="$(arg rl_gear_ratio)" max_motor_rpm="$(arg rl_max_rpm)"/>
+    <xacro:zlac_joint name="rear_right" node="$(arg rr_node)" channel="$(arg rr_channel)" direction="$(arg rr_drive_direction)" gear_ratio="$(arg rr_gear_ratio)" max_motor_rpm="$(arg rr_max_rpm)"/>
+  </ros2_control>
+</robot>

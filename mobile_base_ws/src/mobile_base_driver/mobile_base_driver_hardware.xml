@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<library path="chassis_hardware">
+  <class name="mobile_base_driver/SwerveHardware"
+         type="mobile_base::SwerveHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>DM-J4340P-2EC 24V 绝对位置转向和 ZLAC8015D 行走硬件接口。</description>
+  </class>
+</library>

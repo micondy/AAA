@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>nvblox_bringup</name>
+  <version>0.1.0</version>
+  <description>Optional single RGB-D TSDF/ESDF mapping profile for the mobile manipulator.</description>
+  <maintainer email="2637781202@qq.com">micondy</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>d435i_bringup</exec_depend>
+  <exec_depend>isaac_ros_nvblox</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>nvblox_msgs</exec_depend>
+  <exec_depend>nvblox_ros</exec_depend>
+  <exec_depend>nvblox_rviz_plugin</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rclcpp_components</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>python3-pytest</test_depend>
+  <test_depend>python3-yaml</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

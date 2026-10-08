@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-21T03:20:38.522767+00:00",
+  "passed": true,
+  "source_timeout_s": 0.75,
+  "records": [
+    {
+      "name": "low_0.10_mps",
+      "obstacle_type": "low",
+      "command_speed_mps": 0.1,
+      "output_stop_latency_s": 0.06640193800012639,
+      "forward_travel_after_intrusion_m": 0.009536191821098328,
+      "estimated_final_clearance_m": 0.3454638081789017,
+      "moving_before_intrusion": true,
+      "front_stop_seen": true,
+      "passed": true
+    },
+    {
+      "name": "low_0.18_mps",
+      "obstacle_type": "low",
+      "command_speed_mps": 0.18,
+      "output_stop_latency_s": 0.1366376119999586,
+      "forward_travel_after_intrusion_m": 0.029865264892578125,
+      "estimated_final_clearance_m": 0.3251347351074219,
+      "moving_before_intrusion": true,
+      "front_stop_seen": true,
+      "passed": true
+    },
+    {
+      "name": "hanging_0.18_mps",
+      "obstacle_type": "hanging",
+      "command_speed_mps": 0.18,
+      "output_stop_latency_s": 0.12034724500017546,
+      "forward_travel_after_intrusion_m": 0.026932358741760254,
+      "estimated_final_clearance_m": 0.3530676412582398,
+      "moving_before_intrusion": true,
+      "front_stop_seen": true,
+      "passed": true
+    },
+    {
+      "name": "camera_dropout",
+      "command_speed_mps": 0.1,
+      "output_stop_latency_s": 0.5941808790003051,
+      "moving_before_dropout": true,
+      "passed": true
+    }
+  ]
+}

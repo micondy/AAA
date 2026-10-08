@@ -1,0 +1,17 @@
+# camera.launch.py 读取这个平铺字典，并将参数直接传给官方 RealSense 节点。
+# 只保留经过实机验证的必要项，其余参数使用官方驱动默认值。
+device_type: d435i
+enable_infra1: false
+enable_infra2: false
+# RGB-D 使用相同分辨率，减少深度对齐、传输和后续 SLAM 的计算量。
+# 该 D435i 已确认原生支持两路 848x480@30。
+depth_module.depth_profile: 848x480x30
+rgb_camera.color_profile: 848x480x30
+# 完整模式的点云使用 RGB Camera 第 0 路彩色流作为纹理，避免 Process - Any 告警。
+pointcloud.stream_filter: 2
+pointcloud.stream_index_filter: 0
+unite_imu_method: 2
+enable_sync: true
+publish_tf: true
+tf_publish_rate: 0.0
+diagnostics_period: 1.0

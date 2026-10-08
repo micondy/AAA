@@ -1,0 +1,74 @@
+controller_manager:
+  ros__parameters:
+    # ZLAC8015D uses SDO request/response for four velocity feedback channels.
+    # 100 Hz overloads that transaction path and causes intermittent stale-state
+    # interlocks; 20 Hz remains well inside the 500 ms drive watchdog.
+    update_rate: 20
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    swerve_controller:
+      type: mobile_base_swerve_controller/SwerveController
+
+    # 维护控制器默认只加载不激活，必须先停止 swerve_controller 才能激活。
+    steering_maintenance_controller:
+      type: forward_command_controller/ForwardCommandController
+
+    drive_maintenance_controller:
+      type: forward_command_controller/ForwardCommandController
+
+steering_maintenance_controller:
+  ros__parameters:
+    joints:
+      - front_left_steer_joint
+      - front_right_steer_joint
+      - rear_left_steer_joint
+      - rear_right_steer_joint
+    interface_name: position
+
+drive_maintenance_controller:
+  ros__parameters:
+    joints:
+      - front_left_drive_joint
+      - front_right_drive_joint
+      - rear_left_drive_joint
+      - rear_right_drive_joint
+    interface_name: velocity
+
+swerve_controller:
+  ros__parameters:
+    # CAD 反算初值；最终值由 chassis.yaml 在启动时覆盖，并须经实车标定。
+    wheel_radius: 0.0855
+    max_wheel_angular_velocity: 20.0
+    max_wheel_angular_acceleration: 8.0
+    steering_limit_rad: 1.5707963267948966
+    max_steering_rate_rad_s: 0.15
+    drive_alignment_tolerance_rad: 0.0872664625997165
+    command_timeout: 0.25
+    publish_odometry: true
+    # 实车底盘是 odom -> base_link 的唯一 TF 发布者。
+    publish_odom_tf: true
+    odom_frame: odom
+    base_frame: base_link
+
+    front_left:
+      steering_joint: front_left_steer_joint
+      drive_joint: front_left_drive_joint
+      x: 0.2095
+      y: 0.225
+    front_right:
+      steering_joint: front_right_steer_joint
+      drive_joint: front_right_drive_joint
+      x: 0.2095
+      y: -0.225
+    rear_left:
+      steering_joint: rear_left_steer_joint
+      drive_joint: rear_left_drive_joint
+      x: -0.2095
+      y: 0.225
+    rear_right:
+      steering_joint: rear_right_steer_joint
+      drive_joint: rear_right_drive_joint
+      x: -0.2095
+      y: -0.225

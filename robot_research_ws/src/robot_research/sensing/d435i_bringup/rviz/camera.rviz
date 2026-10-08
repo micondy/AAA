@@ -1,0 +1,47 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Cell Size: 0.25
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Name: RGB
+      Topic:
+        Value: /camera/camera/color/image_raw
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Name: Aligned Depth
+      Topic:
+        Value: /camera/camera/aligned_depth_to_color/image_raw
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: Point Cloud
+      Topic:
+        Value: /camera/camera/depth/color/points
+      Size (Pixels): 2
+      Style: Points
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: camera_link
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 2.0
+      Name: Current View
+      Target Frame: camera_link
+Window Geometry:
+  Height: 900
+  Width: 1400

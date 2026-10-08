@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>mobile_base_bringup</name>
+  <version>0.0.0</version>
+  <description>Mobile Base robot launch, configuration and hardware test tools.</description>
+  <maintainer email="2637781202@qq.com">micondy</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>mobile_base_web_console</depend>
+  <depend>ament_index_python</depend>
+  <depend>mobile_base_driver</depend>
+  <depend>controller_manager</depend>
+  <depend>forward_command_controller</depend>
+  <depend>joint_state_broadcaster</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>mobile_base_description</depend>
+  <depend>rviz2</depend>
+  <depend>mobile_base_swerve_controller</depend>
+  <depend>xacro</depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

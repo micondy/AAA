@@ -1,0 +1,208 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "URDF USD Converter v0.1.3"
+    }
+    doc = """Generated from Composed Stage of root layer /tmp/tmpzsn7hwpl/mobile_base.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_mobile_base_sim_clom24e0/usdex_mobile_base_sim/mobile_base.usdc
+
+
+Generated from Composed Stage of root layer /tmp/urdf_import_mobile_base_sim_clom24e0/temp_mobile_base_sim/mobile_base_sim.usd
+
+
+Generated from Composed Stage of root layer /media/scc/Windows_D/AAA/robot_research_ws/assets/mobile_base/cad_20260912/mobile_base_sim/payloads/base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Scope "Instances"
+{
+    def Xform "base_link" (
+        prepend references = @./geometries.usd@</Geometries/base_link>
+    )
+    {
+        over "base_link" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/base_link/VisualMaterials/chassis_blue>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "chassis_blue" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/chassis_blue>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "front_left_steer_link" (
+        prepend references = @./geometries.usd@</Geometries/front_left_steer_link>
+    )
+    {
+        over "front_left_steer_link" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/front_left_steer_link/VisualMaterials/chassis_blue>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "chassis_blue" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/chassis_blue>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "rear_left_wheel_link" (
+        prepend references = @./geometries.usd@</Geometries/rear_left_wheel_link>
+    )
+    {
+        over "rear_left_wheel_link" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/rear_left_wheel_link/VisualMaterials/wheel_dark>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "wheel_dark" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/wheel_dark>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "front_right_steer_link" (
+        prepend references = @./geometries.usd@</Geometries/front_right_steer_link>
+    )
+    {
+        over "front_right_steer_link" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/front_right_steer_link/VisualMaterials/chassis_blue>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "chassis_blue" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/chassis_blue>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "front_right_wheel_link" (
+        prepend references = @./geometries.usd@</Geometries/front_right_wheel_link>
+    )
+    {
+        over "front_right_wheel_link" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/front_right_wheel_link/VisualMaterials/wheel_dark>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "wheel_dark" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/wheel_dark>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "rear_left_steer_link" (
+        prepend references = @./geometries.usd@</Geometries/rear_left_steer_link>
+    )
+    {
+        over "rear_left_steer_link" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/rear_left_steer_link/VisualMaterials/chassis_blue>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "chassis_blue" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/chassis_blue>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "rear_right_steer_link" (
+        prepend references = @./geometries.usd@</Geometries/rear_right_steer_link>
+    )
+    {
+        over "rear_right_steer_link" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/rear_right_steer_link/VisualMaterials/chassis_blue>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "chassis_blue" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/chassis_blue>
+            )
+            {
+            }
+        }
+    }
+
+    def Xform "rear_right_wheel_link" (
+        prepend references = @./geometries.usd@</Geometries/rear_right_wheel_link>
+    )
+    {
+        over "rear_right_wheel_link" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/rear_right_wheel_link/VisualMaterials/wheel_dark>
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "wheel_dark" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/wheel_dark>
+            )
+            {
+            }
+        }
+    }
+}
+

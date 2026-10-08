@@ -1,0 +1,15 @@
+{
+  "status": "failed",
+  "failure_reason": "Segment 6 timed out",
+  "route": {
+    "long_edge_m": 1.5,
+    "short_edge_m": 1.0,
+    "linear_speed_mps": 0.12,
+    "angular_speed_radps": 0.25
+  },
+  "sample_count": 6773,
+  "ground_truth_path_length_m": 4.13497540873371,
+  "rtabmap_path_length_m": 17.88803208642806,
+  "ground_truth_closure_translation_m": null,
+  "rtabmap_closure_translation_m": null
+}

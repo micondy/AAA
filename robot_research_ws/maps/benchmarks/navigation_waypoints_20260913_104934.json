@@ -1,0 +1,24 @@
+[
+  {
+    "name": "P03_center_south",
+    "x": -1.155,
+    "y": 3.989,
+    "yaw": -0.983,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 0.052,
+    "distance_remaining_m": 0.1559648960828781,
+    "recoveries": 0
+  },
+  {
+    "name": "P04_south_center",
+    "x": -0.655,
+    "y": 3.239,
+    "yaw": -0.825,
+    "status": "ABORTED",
+    "error_code": 104,
+    "duration_s": 39.791,
+    "distance_remaining_m": 0.514165997505188,
+    "recoveries": 13
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "status": "completed",
+  "failure_reason": null,
+  "route": {
+    "long_edge_m": 0.5,
+    "short_edge_m": 0.5,
+    "linear_speed_mps": 0.08,
+    "angular_speed_radps": 0.15,
+    "turn_direction": "right",
+    "command_topic": "/cmd_vel",
+    "ground_truth_topic": "/sim/ground_truth/odom",
+    "estimate_topic": "/swerve_controller/odom"
+  },
+  "sample_count": 6063,
+  "ground_truth_path_length_m": 1.9578839975041997,
+  "rtabmap_path_length_m": 1.9578839975041997,
+  "ground_truth_closure_translation_m": 0.02785842802653738,
+  "rtabmap_closure_translation_m": 0.02785842802653738
+}

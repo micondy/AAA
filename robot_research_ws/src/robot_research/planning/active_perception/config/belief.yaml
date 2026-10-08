@@ -1,0 +1,18 @@
+target_belief:
+  ros__parameters:
+    input_topic: /target_perception/target_pose
+    output_topic: /active_perception/target_belief
+    count_topic: /active_perception/target_observation_count
+    rejected_count_topic: /active_perception/target_rejected_count
+    visible_topic: /active_perception/target_visible
+    selection_id_topic: /active_perception/selected_target_id
+    belief_frame: base_link
+    variance_floor: 1.0e-6
+    variance_ceiling: 0.25
+    process_variance_per_second: 1.0e-6
+    gate_mahalanobis_squared: 11.344867
+    visibility_timeout_seconds: 0.5
+    transform_timeout_seconds: 0.1
+    transform_queue_timeout_seconds: 2.0
+    transform_queue_max_messages: 50
+    orientation_variance: 1.0e6

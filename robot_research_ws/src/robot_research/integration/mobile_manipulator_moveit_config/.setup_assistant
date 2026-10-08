@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: mobile_manipulator_description
+    relative_path: urdf/mobile_manipulator.urdf.xacro
+    xacro_args: use_mock_hardware:=true openarm_ros2_control:=true openarm_use_fake_hardware:=true hand:=true
+  srdf:
+    relative_path: config/mobile_manipulator.srdf.xacro
+  package_settings:
+    author_name: Mobile Robot Research
+    author_email: maintainer@example.com
+    generated_timestamp: 1789030000

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-19T21:43:47.230828+09:00",
+  "status": "SUCCEEDED",
+  "message": "post-view observations collected",
+  "target_id": "green_target_0001",
+  "goal": {
+    "frame_id": "map",
+    "position": {
+      "x": 0.06701919953901525,
+      "y": 1.4186808854084731
+    },
+    "orientation": {
+      "z": -0.5000000000000002,
+      "w": 0.8660254037844385
+    }
+  },
+  "navigation_duration_seconds": 49.177995471,
+  "navigation_status": "SUCCEEDED",
+  "navigation_error_code": 0,
+  "distance_remaining_m": 0.23544588685035706,
+  "recoveries": 0,
+  "belief_change": {
+    "before": {
+      "observation_count": 521,
+      "covariance_trace": 7.965565135929304e-06,
+      "position_xyz": [
+        0.865452241654908,
+        0.03285807379243193,
+        0.9268243909194984
+      ],
+      "visible": true
+    },
+    "after": {
+      "observation_count": 647,
+      "covariance_trace": 4.2778548579380966e-05,
+      "position_xyz": [
+        0.9109423861859913,
+        0.09475996902469158,
+        0.9258345825888625
+      ],
+      "visible": true
+    },
+    "new_observations": 126,
+    "covariance_trace_reduction": -3.4812983443451666e-05,
+    "covariance_trace_reduction_ratio": -4.3704348466658045,
+    "belief_position_shift_m": 0.07682563116132467
+  }
+}

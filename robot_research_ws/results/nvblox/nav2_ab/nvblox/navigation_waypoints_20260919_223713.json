@@ -1,0 +1,46 @@
+[
+  {
+    "name": "E01_east",
+    "x": 0.32,
+    "y": -0.02,
+    "yaw": 0.0,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 0.784,
+    "distance_remaining_m": 0.2648521065711975,
+    "recoveries": 0
+  },
+  {
+    "name": "E02_southeast",
+    "x": 0.4,
+    "y": -0.34,
+    "yaw": -1.571,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 12.391,
+    "distance_remaining_m": 0.2327755093574524,
+    "recoveries": 0
+  },
+  {
+    "name": "E03_southwest",
+    "x": 0.06,
+    "y": -0.4,
+    "yaw": 3.142,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 14.981,
+    "distance_remaining_m": 0.5169588327407837,
+    "recoveries": 0
+  },
+  {
+    "name": "E04_return",
+    "x": 0.0,
+    "y": -0.06,
+    "yaw": 1.571,
+    "status": "SUCCEEDED",
+    "error_code": 0,
+    "duration_s": 17.111,
+    "distance_remaining_m": 0.3103247582912445,
+    "recoveries": 0
+  }
+]

@@ -1,0 +1,11 @@
+target_selector:
+  ros__parameters:
+    input_topic: /target_perception/tracked_detections_3d
+    pose_topic: /active_perception/selected_target_pose
+    id_topic: /active_perception/selected_target_id
+    visible_topic: /active_perception/selected_target_visible
+    detection_topic: /active_perception/selected_target_detection
+    target_id: ""
+    target_class: "*"
+    min_score: 0.5
+    max_missed_frames: 5
