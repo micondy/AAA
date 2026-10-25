@@ -13,7 +13,7 @@
   <exec_depend>diagnostic_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>nav2_msgs</exec_depend>
-  <exec_depend>nvblox_msgs</exec_depend>
+  <!-- Optional: install nvblox_msgs to enable the 3D mesh viewer. -->
   <exec_depend>action_msgs</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>rclpy</exec_depend>
