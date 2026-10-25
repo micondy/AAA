@@ -1,0 +1,40 @@
+rack_detector:
+  ros__parameters:
+    use_sim_time: false
+    color_topic: /sensors/nav_camera/color/image_raw
+    mask_topic: /rack_detector/instance_mask
+    debug_mask_topic: /rack_detector/debug/color_mask
+    metadata_topic: /rack_detector/instances
+    device: auto
+    image_size: 640
+    confidence: 0.35
+    iou: 0.5
+    min_mask_pixels: 80
+    max_rate_hz: 10.0
+
+rack_geometry:
+  ros__parameters:
+    use_sim_time: false
+    output_frame: odom
+    mask_topic: /rack_detector/instance_mask
+    depth_topic: /sensors/nav_camera/aligned_depth_to_color/image_raw
+    camera_info_topic: /sensors/nav_camera/color/camera_info
+    min_depth_m: 0.20
+    max_depth_m: 4.0
+    min_points: 150
+    min_confidence: 0.30
+    filter_expected_heights: false
+    bed_length_m: 2.0
+    sync_queue_size: 60
+    sync_slop_s: 0.08
+
+rack_map:
+  ros__parameters:
+    use_sim_time: false
+    use_source_instance_hints: false
+    group_distance_m: 1.1
+    rack_distance_m: 1.8
+    layer_xy_distance_m: 1.8
+    layer_height_distance_m: 0.18
+    min_confirmed_layers: 3
+    min_confirmed_frames: 3

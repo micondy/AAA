@@ -18,7 +18,7 @@
     simulation may enable them explicitly.
   -->
   <xacro:arg name="nav_camera_enabled" default="true"/>
-  <xacro:arg name="nav_camera_mount_xyz" default="0.10 0 1.12"/>
+  <xacro:arg name="nav_camera_mount_xyz" default="0.10 0 1.70"/>
   <xacro:arg name="nav_camera_mount_rpy" default="0 0.20944 0"/>
   <xacro:arg name="nav_camera_use_nominal_extrinsics" default="false"/>
   <!-- Required as global substitutions by parts of the upstream hand macro. -->

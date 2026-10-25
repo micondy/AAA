@@ -12,13 +12,19 @@ class CmdVelPriorityMux(Node):
     def __init__(self) -> None:
         super().__init__("cmd_vel_priority_mux")
         self.declare_parameter("manual_timeout", 0.30)
+        self.declare_parameter("nav_input_topic", "/cmd_vel_nav_safe")
+        self.declare_parameter("manual_input_topic", "/cmd_vel_web")
+        self.declare_parameter("output_topic", "/cmd_vel")
         self.manual_timeout = float(self.get_parameter("manual_timeout").value)
         self.manual_deadline = 0.0
-        self.output = self.create_publisher(Twist, "/cmd_vel", 10)
-        self.create_subscription(Twist, "/cmd_vel_nav_safe", self._on_nav, 10)
-        self.create_subscription(Twist, "/cmd_vel_web", self._on_manual, 10)
+        nav_input = str(self.get_parameter("nav_input_topic").value)
+        manual_input = str(self.get_parameter("manual_input_topic").value)
+        output = str(self.get_parameter("output_topic").value)
+        self.output = self.create_publisher(Twist, output, 10)
+        self.create_subscription(Twist, nav_input, self._on_nav, 10)
+        self.create_subscription(Twist, manual_input, self._on_manual, 10)
         self.get_logger().info(
-            "Velocity arbitration active: web manual > Nav2 safe output > Isaac /cmd_vel"
+            f"Velocity arbitration active: {manual_input} > {nav_input} > {output}"
         )
 
     def _on_manual(self, message: Twist) -> None:

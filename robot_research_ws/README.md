@@ -1,5 +1,9 @@
 # robot_research_ws
 
+> 新接手本工程请先看
+> [移动操作机器人工程交接文档](docs/HANDOFF.md)：其中集中说明当前能做什么、启动方式、
+> 能力边界、已知限制和下一步优先级。
+>
 > 新成员或准备修改跨包接口时，先看
 > [移动操作机器人架构导航](docs/architecture/README.md)：其中包含 Mermaid 系统图、
 > 运行时序、全部 ROS 包职责和文档维护规则。
@@ -25,6 +29,8 @@ ROS 2、MoveIt 2、硬件接口和 CAN 库全部来自工程内固定版本的 E
 - `mobile_navigation_bringup`：固定 D435i 建图、地图定位、Nav2 与前向点云障碍。
 - `target_perception`：相机来源无关的 RGB-D 目标观测；已有通用 COCO 日常物体实例分割，
   输出标准 2D/3D detection、带协方差位姿、深度质量指标和可视化叠加图。
+- `rack_perception`：Isaac 三层棚架实例掩膜、RGB-D 几何提取、跨帧稳定架/层 ID、
+  停车位姿候选与 15 Hz 实时对齐误差；[使用与验收说明](src/robot_research/perception/rack_perception/README.md)。
 - `active_perception`：关注目标选择、目标多帧高斯 belief、协方差融合、离群门控、可见性、
   固定相机底盘 NBV 候选生成、地图过滤和 Nav2 路径评分。
 - `mobile_manipulator_description`：自研底盘、Enactic 官方 OpenArm v1.0 与官方 D435i
@@ -93,6 +99,14 @@ colcon test-result --verbose
   间断0.184 s，显存平均3305 MB/峰值3452 MB，温度峰值66 °C。默认仍使用RTAB-Map
   定位和现有Nav2点云障碍层；可切换的Nvblox Nav2 profile已完成4/4点功能初测及低矮、
   悬空、货架障碍的ESDF标记/清除。
+- 草菇棚架专项已在 Isaac 中用 4×4 独立三层架取代不可拆分的整体 `Gupeng.STL` 作为默认
+  场景。单架多视角和全阵列脚本巡行已通过：后者为 25/25 路点、16 架/48 层、完整地图
+  一套稳定 ID；[2026-10-16 验收报告](results/rack/grid_acceptance.json)记录了误差与间隙。
+  这里是仿真真值语义 + 真值 TF 的感知验收，不是实机视觉、Nav2 自动停车或碰撞安全验收；
+  脚本路线最小估算间隙仅约 4.5 cm，导航方案由后续工作改进。
+  `sim_rack_navigation.launch.py` 现可一次启动棚架、网页、RTAB-Map 在线地图、Nav2 和
+  Nvblox；[联动冒烟记录](results/rack/web_nav2_smoke_20261016.json)证明网页手动控制和
+  单个同通道短距离 Nav2 目标跑通，尚非全阵列 Nav2 自主巡行验收。
 
 ## D435i
 

@@ -18,9 +18,11 @@
   <exec_depend>mobile_manipulator_description</exec_depend>
   <exec_depend>mobile_manipulator_moveit_config</exec_depend>
   <exec_depend>mobile_navigation_bringup</exec_depend>
+  <exec_depend>nvblox_bringup</exec_depend>
   <exec_depend>moveit_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>rack_perception</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>shape_msgs</exec_depend>

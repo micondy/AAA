@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import random
 from pathlib import Path
 import sys
 import time
@@ -46,6 +47,31 @@ def parse_args() -> argparse.Namespace:
         "--add-green-target",
         action="store_true",
         help="Add a 0.20 m green cube for target_perception validation.",
+    )
+    parser.add_argument(
+        "--add-rack",
+        action="store_true",
+        help="Add the three-layer rack and publish semantic labels.",
+    )
+    parser.add_argument(
+        "--rack-asset",
+        default="",
+        help="Converted rack USD; empty uses assets/rack/Gupeng.usd.",
+    )
+    parser.add_argument(
+        "--rack-layout",
+        choices=("grid4x4", "single", "cad"),
+        default="grid4x4",
+        help="Rack scene: navigable 4x4 units (default), one unit, or the full CAD.",
+    )
+    parser.add_argument(
+        "--rack-visual-seed", type=int, default=0,
+        help="0 keeps baseline colors; positive seeds vary rack colors for synthetic data.",
+    )
+    parser.add_argument(
+        "--parametric-rack",
+        action="store_true",
+        help="Deprecated alias for --rack-layout single.",
     )
     parser.add_argument(
         "--green-target-depth",
@@ -90,6 +116,7 @@ args = parse_args()
 simulation_app = SimulationApp({"headless": args.headless})
 
 import isaacsim.core.experimental.utils.app as app_utils
+import isaacsim.core.experimental.utils.semantics as semantics_utils
 import carb
 import omni
 import omni.graph.core as og
@@ -98,7 +125,7 @@ from isaacsim.core.experimental.utils.app import enable_extension
 from isaacsim.core.simulation_manager import SimulationManager
 from isaacsim.core.utils.viewports import set_camera_view
 from isaacsim.storage.native import get_assets_root_path
-from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics, UsdShade
+from pxr import Gf, Sdf, Usd, UsdGeom, UsdLux, UsdPhysics, UsdShade
 
 
 WORKSPACE = Path(__file__).resolve().parents[2]
@@ -112,11 +139,13 @@ NAV_CAMERA_PRIM = NAV_CAMERA_MOUNT_PRIM + "/nav_camera_color"
 NAV_CAMERA_GRAPH = "/ProjectNavCamera"
 ROS_GRAPH = "/MobileManipulatorBaseRosGraph"
 # Provisional top-center mount. Positive ROS pitch points the camera downward.
-NAV_CAMERA_MOUNT_TRANSLATION = (0.10, 0.0, 1.12)
+NAV_CAMERA_MOUNT_TRANSLATION = (0.10, 0.0, 1.70)
 NAV_CAMERA_MOUNT_PITCH = math.radians(12.0)
 NAV_CAMERA_OPTICAL_OFFSET = (0.0106, 0.0325, 0.0125)
 GREEN_TARGET_PRIM = "/World/GreenTarget"
 GREEN_TARGET_SIZE = 0.20
+RACK_PRIM = "/World/ValidationRack"
+DEFAULT_RACK_USD = WORKSPACE / "assets/rack/Gupeng.usd"
 NAV_OBSTACLE_PRIM = "/World/NavTestObstacle"
 NAV_OBSTACLE_DISTANCE = 1.00
 NAV_OBSTACLE_LOW_DISTANCE = 1.00
@@ -144,7 +173,7 @@ WHEEL_RADIUS = 0.0855
 COMMAND_TIMEOUT_S = 0.25
 STEERING_ALIGNMENT_TOLERANCE = math.radians(5.0)
 MAX_LINEAR_SPEED = 0.30
-MAX_LATERAL_SPEED = 0.20
+MAX_LATERAL_SPEED = 0.30
 MAX_ANGULAR_SPEED = 0.50
 # The imported wheel/contact model has a static-friction dead zone below about
 # 0.05 rad/s.  Compensate only pure in-place turns in simulation; real chassis
@@ -324,7 +353,26 @@ def command_base(stage: Usd.Stage, steering: list[float], wheel_speed: list[floa
         )
 
 
-def create_ros_state_graph() -> None:
+def inverse_transform(position, rotation_xyzw):
+    """Return the inverse rigid transform as translation and xyzw quaternion."""
+    x, y, z, w = (float(value) for value in rotation_xyzw)
+    norm = math.sqrt(x * x + y * y + z * z + w * w)
+    if norm <= 0.0:
+        raise ValueError("Cannot invert a zero-length quaternion")
+    x, y, z, w = -x / norm, -y / norm, -z / norm, w / norm
+    vx, vy, vz = (-float(value) for value in position)
+    tx = 2.0 * (y * vz - z * vy)
+    ty = 2.0 * (z * vx - x * vz)
+    tz = 2.0 * (x * vy - y * vx)
+    translation = [
+        vx + w * tx + y * tz - z * ty,
+        vy + w * ty + z * tx - x * tz,
+        vz + w * tz + x * ty - y * tx,
+    ]
+    return translation, [x, y, z, w]
+
+
+def create_ros_state_graph(stage: Usd.Stage) -> None:
     """Publish time, idealized controller odometry, and separate ground truth.
 
     The simulation controller odometry owns ``odom -> base_link`` just like the
@@ -334,6 +382,17 @@ def create_ros_state_graph() -> None:
     import usdrt.Sdf
 
     keys = og.Controller.Keys
+    initial_position, initial_orientation = base_pose(stage)
+    initial_imaginary = initial_orientation.GetImaginary()
+    initial_rotation_xyzw = [
+        float(initial_imaginary[0]),
+        float(initial_imaginary[1]),
+        float(initial_imaginary[2]),
+        float(initial_orientation.GetReal()),
+    ]
+    odom_world_translation, odom_world_rotation = inverse_transform(
+        initial_position, initial_rotation_xyzw
+    )
     graph, _, _, _ = og.Controller.edit(
         {"graph_path": ROS_GRAPH, "evaluator_name": "execution"},
         {
@@ -346,6 +405,7 @@ def create_ros_state_graph() -> None:
                 ("GroundTruthOdomPub", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
                 ("ControllerOdomPub", "isaacsim.ros2.bridge.ROS2PublishOdometry"),
                 ("OdomTfPub", "isaacsim.ros2.bridge.ROS2PublishRawTransformTree"),
+                ("WorldOdomTfPub", "isaacsim.ros2.bridge.ROS2PublishRawTransformTree"),
                 ("GroundTruthTfPub", "isaacsim.ros2.bridge.ROS2PublishRawTransformTree"),
                 ("JointPub", "isaacsim.ros2.bridge.ROS2PublishJointState"),
             ],
@@ -363,6 +423,11 @@ def create_ros_state_graph() -> None:
                 ("OdomTfPub.inputs:topicName", "tf"),
                 ("OdomTfPub.inputs:parentFrameId", "odom"),
                 ("OdomTfPub.inputs:childFrameId", "base_link"),
+                ("WorldOdomTfPub.inputs:topicName", "tf"),
+                ("WorldOdomTfPub.inputs:parentFrameId", "odom"),
+                ("WorldOdomTfPub.inputs:childFrameId", "sim_world"),
+                ("WorldOdomTfPub.inputs:translation", odom_world_translation),
+                ("WorldOdomTfPub.inputs:rotation", odom_world_rotation),
                 ("GroundTruthTfPub.inputs:topicName", "sim/ground_truth/tf"),
                 ("GroundTruthTfPub.inputs:parentFrameId", "sim_world"),
                 ("GroundTruthTfPub.inputs:childFrameId", "base_link"),
@@ -388,6 +453,8 @@ def create_ros_state_graph() -> None:
                 ("Time.outputs:simulationTime", "OdomTfPub.inputs:timeStamp"),
                 ("Odometry.outputs:position", "OdomTfPub.inputs:translation"),
                 ("Odometry.outputs:orientation", "OdomTfPub.inputs:rotation"),
+                ("Tick.outputs:tick", "WorldOdomTfPub.inputs:execIn"),
+                ("Time.outputs:simulationTime", "WorldOdomTfPub.inputs:timeStamp"),
                 ("Odometry.outputs:execOut", "GroundTruthTfPub.inputs:execIn"),
                 ("Time.outputs:simulationTime", "GroundTruthTfPub.inputs:timeStamp"),
                 ("Odometry.outputs:position", "GroundTruthTfPub.inputs:translation"),
@@ -494,6 +561,7 @@ def create_nav_camera(stage: Usd.Stage) -> None:
                 ("RgbPublisher", "isaacsim.ros2.bridge.ROS2CameraHelper"),
                 ("DepthPublisher", "isaacsim.ros2.bridge.ROS2CameraHelper"),
                 ("PointcloudPublisher", "isaacsim.ros2.bridge.ROS2CameraHelper"),
+                ("SemanticPublisher", "isaacsim.ros2.bridge.ROS2CameraHelper"),
                 ("CameraInfoPublisher", "isaacsim.ros2.bridge.ROS2CameraInfoHelper"),
             ],
             keys.SET_VALUES: [
@@ -519,6 +587,18 @@ def create_nav_camera(stage: Usd.Stage) -> None:
                 ("PointcloudPublisher.inputs:frameId", "nav_camera_color_optical_frame"),
                 ("PointcloudPublisher.inputs:resetSimulationTimeOnStop", True),
                 (
+                    "SemanticPublisher.inputs:topicName",
+                    "sensors/nav_camera/semantic_segmentation",
+                ),
+                ("SemanticPublisher.inputs:type", "semantic_segmentation"),
+                ("SemanticPublisher.inputs:frameId", "nav_camera_color_optical_frame"),
+                ("SemanticPublisher.inputs:enableSemanticLabels", True),
+                (
+                    "SemanticPublisher.inputs:semanticLabelsTopicName",
+                    "sensors/nav_camera/semantic_labels",
+                ),
+                ("SemanticPublisher.inputs:resetSimulationTimeOnStop", True),
+                (
                     "CameraInfoPublisher.inputs:topicName",
                     "sensors/nav_camera/color/camera_info",
                 ),
@@ -529,10 +609,12 @@ def create_nav_camera(stage: Usd.Stage) -> None:
                 ("CreateRenderProduct.outputs:execOut", "RgbPublisher.inputs:execIn"),
                 ("CreateRenderProduct.outputs:execOut", "DepthPublisher.inputs:execIn"),
                 ("CreateRenderProduct.outputs:execOut", "PointcloudPublisher.inputs:execIn"),
+                ("CreateRenderProduct.outputs:execOut", "SemanticPublisher.inputs:execIn"),
                 ("CreateRenderProduct.outputs:execOut", "CameraInfoPublisher.inputs:execIn"),
                 ("CreateRenderProduct.outputs:renderProductPath", "RgbPublisher.inputs:renderProductPath"),
                 ("CreateRenderProduct.outputs:renderProductPath", "DepthPublisher.inputs:renderProductPath"),
                 ("CreateRenderProduct.outputs:renderProductPath", "PointcloudPublisher.inputs:renderProductPath"),
+                ("CreateRenderProduct.outputs:renderProductPath", "SemanticPublisher.inputs:renderProductPath"),
                 ("CreateRenderProduct.outputs:renderProductPath", "CameraInfoPublisher.inputs:renderProductPath"),
             ],
         },
@@ -541,11 +623,192 @@ def create_nav_camera(stage: Usd.Stage) -> None:
     og.Controller.evaluate_sync(graph)
     print(
         "[mobile_manipulator_sim] nav RGB-D READY "
-        "top_mount=base_link:(0.10,0,1.12),pitch_down=12deg "
+        "top_mount=base_link:(0.10,0,1.70),pitch_down=12deg "
         f"{args.nav_camera_width}x{args.nav_camera_height}@{args.nav_camera_hz:g}Hz "
         "frame=nav_camera_color_optical_frame",
         flush=True,
     )
+
+
+def create_rack_unit(
+    stage: Usd.Stage,
+    path: str,
+    center_xy: tuple[float, float],
+    rack_index: int | None,
+) -> None:
+    """Create one freestanding three-layer planting rack."""
+    root = UsdGeom.Xform.Define(stage, path)
+    root.AddTranslateOp().Set(Gf.Vec3d(center_xy[0], center_xy[1], 0.0))
+    color_rng = random.Random(args.rack_visual_seed * 1009 + (rack_index or 0) * 37)
+
+    def varied_color(default: tuple[float, float, float]) -> tuple[float, float, float]:
+        if args.rack_visual_seed == 0:
+            return default
+        return tuple(max(0.05, min(0.9, channel * color_rng.uniform(0.55, 1.6))) for channel in default)
+
+    def label(kind: str, layer: int | None = None) -> str:
+        if rack_index is None:
+            return f"rack_layer_{layer}" if layer is not None else "rack_post"
+        return (
+            f"rack_{rack_index:02d}_layer_{layer}"
+            if layer is not None
+            else f"rack_{rack_index:02d}_post"
+        )
+
+    def add_box(name: str, center, size, color, semantic_label: str) -> None:
+        cube = UsdGeom.Cube.Define(stage, f"{path}/{name}")
+        cube.AddTranslateOp().Set(Gf.Vec3d(*center))
+        cube.AddScaleOp().Set(Gf.Vec3f(*(value / 2.0 for value in size)))
+        cube.GetDisplayColorAttr().Set([Gf.Vec3f(*color)])
+        UsdPhysics.CollisionAPI.Apply(cube.GetPrim())
+        semantics_utils.add_labels(cube.GetPrim(), labels=semantic_label)
+
+    # 0.80 m deep x 2.00 m long leaves useful planting area while a 1.80 m
+    # clear cross-aisle and 1.40 m end aisle remain in the 4x4 layout.
+    for index, height in enumerate((0.55, 1.05, 1.55), start=1):
+        add_box(
+            f"layer_{index}",
+            (0.0, 0.0, height - 0.04),
+            (0.80, 2.00, 0.08),
+            varied_color((0.12, 0.48 + 0.08 * index, 0.18)),
+            label("layer", index),
+        )
+    for x_index, x in enumerate((-0.37, 0.37)):
+        for y_index, y in enumerate((-0.97, 0.97)):
+            add_box(
+                f"post_{x_index}_{y_index}",
+                (x, y, 0.84),
+                (0.06, 0.06, 1.68),
+                varied_color((0.18, 0.22, 0.20)),
+                label("post"),
+            )
+
+
+def create_parametric_validation_rack(stage: Usd.Stage) -> None:
+    """Build one rack for focused perception regression."""
+    create_rack_unit(stage, RACK_PRIM, (1.95, 0.0), None)
+    print(
+        "[mobile_manipulator_sim] parametric validation rack READY "
+        "layers=3 front_x=1.55m heights=0.55,1.05,1.55m",
+        flush=True,
+    )
+
+
+def create_rack_grid(stage: Usd.Stage) -> None:
+    """Create sixteen independent racks with robot-width navigation aisles."""
+    UsdGeom.Xform.Define(stage, RACK_PRIM)
+    x_centers = (2.0, 4.6, 7.2, 9.8)
+    y_centers = (-5.1, -1.7, 1.7, 5.1)
+    rack_index = 0
+    for row, x in enumerate(x_centers, start=1):
+        for column, y in enumerate(y_centers, start=1):
+            rack_index += 1
+            create_rack_unit(
+                stage,
+                f"{RACK_PRIM}/Rack_{row}_{column}",
+                (x, y),
+                rack_index,
+            )
+    print(
+        "[mobile_manipulator_sim] 4x4 rack grid READY racks=16 "
+        "unit=0.80x2.00x1.68m cross_aisle=1.80m end_aisle=1.40m",
+        flush=True,
+    )
+
+
+def create_cad_validation_rack(stage: Usd.Stage, asset_path: Path) -> None:
+    """Load the exported full rack and add per-layer semantic proxy surfaces."""
+    if not asset_path.is_file():
+        raise RuntimeError(
+            f"rack USD not found: {asset_path}; run tools/isaac_sim/convert_rack_stl.py"
+        )
+
+    # Source STL bounds are 8580 x 3014.2485 x 2878 mm. Rotate its long X
+    # dimension onto world Y, put the near long side at world X=3.50 m and
+    # center the 8.58 m length around world Y=0.
+    root = UsdGeom.Xform.Define(stage, RACK_PRIM)
+    root.AddTranslateOp().Set(Gf.Vec3d(6.5142485, -4.29, 0.0))
+    root.AddRotateZOp().Set(90.0)
+    root.AddScaleOp().Set(Gf.Vec3f(0.001, 0.001, 0.001))
+    asset = stage.DefinePrim(f"{RACK_PRIM}/Asset", "Xform")
+    asset.GetReferences().AddReference(str(asset_path.resolve()))
+    semantics_utils.add_labels(asset, labels="rack_structure")
+
+    def add_world_box(path: str, center, size, color, label: str) -> None:
+        cube = UsdGeom.Cube.Define(stage, path)
+        cube.AddTranslateOp().Set(Gf.Vec3d(*center))
+        cube.AddScaleOp().Set(Gf.Vec3f(*(value / 2.0 for value in size)))
+        cube.GetDisplayColorAttr().Set([Gf.Vec3f(*color)])
+        UsdPhysics.CollisionAPI.Apply(cube.GetPrim())
+        semantics_utils.add_labels(cube.GetPrim(), labels=label)
+
+    # The STL is a single merged mesh, so it cannot carry independent layer
+    # classes. These 30 mm overlays follow the three dominant CAD shelf bands
+    # (vertex-density peaks at 0.89, 1.53 and 2.17 m). Their top faces supply
+    # deterministic semantic truth while rendered depth remains colocated with
+    # the real shelf structure.
+    layer_heights = (0.89, 1.53, 2.17)
+    for index, height in enumerate(layer_heights, start=1):
+        add_world_box(
+            f"{RACK_PRIM}Semantic/layer_{index}",
+            (3.79, -0.29, height - 0.015),
+            (0.52, 7.50, 0.03),
+            (0.10, 0.42 + 0.09 * index, 0.16),
+            f"rack_layer_{index}",
+        )
+
+    # Mark the two near corner uprights. The imported STL remains the primary
+    # visual geometry; these narrow overlays expose a post class to perception.
+    for side, y in (("left", -4.02), ("right", 4.02)):
+        add_world_box(
+            f"{RACK_PRIM}Semantic/post_{side}",
+            (3.55, y, 1.39),
+            (0.07, 0.07, 2.70),
+            (0.16, 0.19, 0.17),
+            "rack_post",
+        )
+
+    # A coarse invisible collision envelope protects the robot without asking
+    # PhysX to cook a 254k-triangle collision mesh. RGB-D/nvblox still see the
+    # detailed imported surface.
+    collision = UsdGeom.Cube.Define(stage, f"{RACK_PRIM}CollisionEnvelope")
+    collision.AddTranslateOp().Set(Gf.Vec3d(5.007, 0.0, 1.439))
+    collision.AddScaleOp().Set(Gf.Vec3f(1.507, 4.29, 1.439))
+    UsdPhysics.CollisionAPI.Apply(collision.GetPrim())
+    UsdGeom.Imageable(collision.GetPrim()).MakeInvisible()
+
+    print(
+        "[mobile_manipulator_sim] CAD validation rack READY "
+        f"asset={asset_path} size=8.580x3.014x2.878m front_x=3.50m "
+        "layers=0.89,1.53,2.17m",
+        flush=True,
+    )
+
+
+def create_validation_rack(stage: Usd.Stage) -> None:
+    """Create the selected rack environment."""
+    layout = "single" if args.parametric_rack else args.rack_layout
+    if layout == "grid4x4":
+        create_rack_grid(stage)
+        return
+    if layout == "single":
+        create_parametric_validation_rack(stage)
+        return
+    asset_path = Path(args.rack_asset).expanduser() if args.rack_asset else DEFAULT_RACK_USD
+    create_cad_validation_rack(stage, asset_path)
+
+
+def create_rack_lighting(stage: Usd.Stage) -> None:
+    """Give RGB training frames a reproducible, daylight-like light source."""
+    dome = UsdLux.DomeLight.Define(stage, "/World/RackDaylightDome")
+    dome.CreateIntensityAttr(750.0)
+    dome.CreateColorAttr(Gf.Vec3f(0.90, 0.94, 1.0))
+    sun = UsdLux.DistantLight.Define(stage, "/World/RackDaylightSun")
+    sun.CreateIntensityAttr(2200.0)
+    sun.CreateColorAttr(Gf.Vec3f(1.0, 0.95, 0.85))
+    sun.CreateAngleAttr(2.0)
+    sun.AddRotateXYZOp().Set(Gf.Vec3f(-35.0, 25.0, -15.0))
+    print("[mobile_manipulator_sim] rack daylight READY dome=750 sun=2200", flush=True)
 
 
 def nav_camera_optical_position() -> tuple[float, float, float]:
@@ -835,18 +1098,21 @@ def main() -> None:
         raise ValueError("green target stage duration must be positive")
     if args.add_green_target:
         create_green_target(stage, target_depths[0])
+    if args.add_rack:
+        create_validation_rack(stage)
+        create_rack_lighting(stage)
     if args.enable_nav_rgbd:
         create_nav_camera(stage)
     if args.enable_nav_obstacle_control:
         create_nav_test_obstacle(stage)
     if ros_enabled:
-        create_ros_state_graph()
+        create_ros_state_graph(stage)
     ros_input = (
         RosCmdVelInput(args.enable_nav_obstacle_control) if args.ros else None
     )
     set_camera_view(
-        eye=[3.0, 3.0, 2.3],
-        target=[0.0, 0.0, 0.9],
+        eye=[13.0, 12.0, 11.0] if args.add_rack and args.rack_layout == "grid4x4" else [3.0, 3.0, 2.3],
+        target=[5.5, 0.0, 0.7] if args.add_rack and args.rack_layout == "grid4x4" else [0.0, 0.0, 0.9],
         camera_prim_path="/OmniverseKit_Persp",
     )
 
@@ -854,7 +1120,28 @@ def main() -> None:
     app_utils.play()
     simulation_app.update()
 
-    initial_position, _ = base_pose(stage)
+    initial_position, initial_orientation = base_pose(stage)
+    # IsaacComputeOdometry defines odom at its first simulated sample, not at
+    # graph construction. The inverted settled transform preserves world-height
+    # geometry without giving odom a second parent beside RTAB-Map's map frame.
+    settled_q_imag = initial_orientation.GetImaginary()
+    settled_world_odom_translation, settled_world_odom_rotation = inverse_transform(
+        initial_position,
+        [
+            float(settled_q_imag[0]),
+            float(settled_q_imag[1]),
+            float(settled_q_imag[2]),
+            float(initial_orientation.GetReal()),
+        ],
+    )
+    og.Controller.set(
+        og.Controller.attribute(f"{ROS_GRAPH}/WorldOdomTfPub.inputs:translation"),
+        settled_world_odom_translation,
+    )
+    og.Controller.set(
+        og.Controller.attribute(f"{ROS_GRAPH}/WorldOdomTfPub.inputs:rotation"),
+        settled_world_odom_rotation,
+    )
     test_seconds = args.test_seconds
     if args.headless and test_seconds <= 0.0:
         test_seconds = 10.0

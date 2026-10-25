@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "interrupted": false,
+  "elapsed_wall_s": 581.0213882229999,
+  "waypoints_reached": 25,
+  "waypoints_total": 25,
+  "resumed_from_waypoint": 0,
+  "model_frames": 5236,
+  "final_racks": 16,
+  "final_layers": 48,
+  "maximum_racks": 16,
+  "maximum_layers": 48,
+  "complete_stable_id_sets": 1,
+  "maximum_height_error_m": 0.018111117283285738,
+  "maximum_position_error_m": 0.30323017440379757,
+  "minimum_clearance_m": 0.0453953593070025,
+  "overlap_risk_samples": 0,
+  "final_position": [
+    8.703432082635118,
+    -6.415282249916345
+  ]
+}

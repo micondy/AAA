@@ -60,7 +60,7 @@ def test_integrated_description_is_one_valid_tree():
     camera_mount = root.find("joint[@name='nav_camera_joint']")
     assert camera_mount is not None
     assert camera_mount.find("parent").attrib["link"] == "base_link"
-    assert camera_mount.find("origin").attrib["xyz"] == "0.10 0 1.12"
+    assert camera_mount.find("origin").attrib["xyz"] == "0.10 0 1.70"
     assert camera_mount.find("origin").attrib["rpy"] == "0 0.20944 0"
     camera_link = root.find("link[@name='nav_camera_link']")
     assert camera_link is not None

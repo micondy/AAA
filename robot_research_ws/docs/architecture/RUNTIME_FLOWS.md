@@ -96,6 +96,33 @@ sequenceDiagram
     N-->>E: 结果 / 取消 / 超时
 ```
 
+## 棚架几何与对齐（Isaac 仿真基线）
+
+```mermaid
+sequenceDiagram
+    participant I as Isaac 语义分割 / 深度
+    participant D as rack_detector
+    participant G as rack_geometry
+    participant M as rack_map
+    participant P as harvest_planner
+    participant A as rack_alignment
+    participant V as RViz / 调试
+
+    I->>D: 语义像素与标签字典
+    D->>G: mono16 架/层实例掩膜
+    I->>G: 对齐深度、内参、真值 TF
+    G->>M: 三维层面、边界和前沿观测
+    M->>V: 稳定 ID、层架模型和 MarkerArray
+    M->>P: 目标层范围
+    P->>V: 候选停车 PoseStamped
+    M->>A: 目标前沿
+    A->>V: 15 Hz 距离、横向和角度误差
+    Note over P,A: 当前只输出，不自动发送 Nav2 目标或底盘速度
+```
+
+4×4 验收脚本直接发送 `/cmd_vel` 巡行，不属于上面的停车执行链；Nvblox 的可选启动入口
+已做短时非空 Mesh/ESDF 冒烟，尚未完成全温室地图质量或 Nav2 代价地图验收。
+
 ## 控制模式状态机
 
 ```mermaid
@@ -122,4 +149,6 @@ Isaac 直控 profile 不进入硬件维护模式。
 | Nvblox | `nvblox_bringup mapping.launch.py` | TSDF/Mesh/ESDF | 定位所有权 |
 | 感知最小链 | `sim_perception.launch.py` | Isaac RGB-D、描述、目标感知 | MoveIt、Nav2 |
 | 主动感知 | `sim_active_perception.launch.py` | 感知、Belief、NBV、可选执行 | 默认自动运动 |
+| 棚架仿真 | `sim_rack.launch.py` | Isaac 三层架、RGB-D、架/层几何与对齐输出；可选 Nvblox | Nav2 自动停车、真实分割 |
+| 棚架联动 | `sim_rack_navigation.launch.py` | 4×4 架、感知、网页、RTAB 在线建图、Nav2、Collision Monitor、默认 Nvblox | 自动停车执行、全阵列 Nav2 自主巡航验收、真实分割 |
 | 双臂规划 | `mobile_manipulator_moveit_config demo.launch.py` | MoveIt、Planning Scene、控制器 | 自主导航 |

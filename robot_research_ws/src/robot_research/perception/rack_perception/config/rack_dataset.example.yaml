@@ -1,0 +1,7 @@
+# Copy to your labeled dataset root as data.yaml and adjust path.
+path: /absolute/path/to/rack_dataset
+train: images/train
+val: images/val
+names:
+  0: bed
+  1: post

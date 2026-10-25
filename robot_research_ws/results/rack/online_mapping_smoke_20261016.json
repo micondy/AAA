@@ -1,0 +1,17 @@
+{
+  "scenario": "Isaac grid4x4, headless, enable_nvblox=true",
+  "method": "12-second ROS 2 subscription sample with 0.15 m/s forward command for 4 seconds",
+  "navigation_mode": "direct /cmd_vel smoke test; Nav2 not started",
+  "odom_start_xy_m": [-0.00008793207234703004, -0.000000021653249859809875],
+  "odom_end_xy_m": [0.5988909001171123, -0.00010157423093914986],
+  "odom_samples": 725,
+  "rack_map_first": {"racks": 4, "layers": 12, "unique_rack_ids": 4, "unique_layer_ids": 12},
+  "rack_map_last": {"racks": 4, "layers": 12, "unique_rack_ids": 4, "unique_layer_ids": 12},
+  "rack_map_messages": 86,
+  "alignment_messages": 173,
+  "nvblox_mesh_messages": 46,
+  "nvblox_mesh_messages_with_vertices": 23,
+  "nvblox_esdf_slice_messages": 55,
+  "nvblox_esdf_slice_messages_with_known_cells": 55,
+  "scope_note": "Only four racks were in the camera's current coverage. Full 16-rack/48-layer route evidence is in grid_acceptance.json. This does not test Nav2 autonomous navigation or collision safety."
+}

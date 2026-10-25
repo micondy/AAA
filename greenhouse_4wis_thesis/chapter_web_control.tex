@@ -1,0 +1,420 @@
+% 本文件作为独立章节插入主文档，建议放在“移动机器人硬件与软件系统设计”之后、
+% “四轮独立转向驱动底盘运动学建模与控制”之前。
+% 本章依据 mobile_base_web_console、mobile_base_swerve_controller 与
+% mobile_base_driver 的当前实现撰写；实验数据未完成处保留待测说明。
+
+\chapter{基于Web的机器人监控与遥操作系统设计与实现}
+\label{chap:web-control}
+
+为降低移动机器人现场调试和多模块联调的操作复杂度，本文设计并实现了一套基于Web的
+机器人监控与遥操作系统。该系统运行于机器人上位计算机，局域网内的操作人员无需安装
+专用客户端，仅通过浏览器即可完成系统状态查看、整车运动控制、工作模式切换、单轮维护、
+转向零位标定、地图与三维环境查看以及导航目标下发等操作。
+
+Web系统并不直接计算四轮转角和轮速，而是向ROS~2控制链发布车体速度指令
+$[v_x,v_y,\omega_z]^{\mathrm T}$。四轮运动学解算、有限转角下的等效轮向选择、轮速限幅
+及对齐联锁由Jetson端底盘控制器完成，相关方法将在第\ref{chap:kinematics-control}章中介绍。
+拟增加的STM32只接收轮级目标，负责确定周期的CAN通信、反馈采集和底层故障保护，不重复
+执行车体逆运动学。由于STM32控制板尚未完成，现阶段原型系统由Jetson通过SocketCAN直接
+连接执行器；后续将保持Web和ROS~2接口不变，仅替换底层硬件通信通路。
+
+\section{系统需求与总体设计}
+
+\subsection{功能需求}
+
+结合机器人装配、标定、遥操作和自主导航实验的实际需要，Web系统的功能需求可归纳为
+以下五个方面。
+
+\begin{enumerate}
+    \item \textbf{状态监测：}显示控制器、CAN接口、四轮关节、里程计及系统诊断状态，
+          使操作者能够判断控制链是否具备运行条件；
+    \item \textbf{整车遥操作：}将虚拟摇杆、旋转滑条和典型动作按钮转换为车体三自由度
+          速度指令，并支持立即停车；
+    \item \textbf{维护与标定：}在独立维护模式下对单个轮组进行低速转向和行走测试，
+          读取转向电机绝对位置并保存机械零位；
+    \item \textbf{环境信息显示：}显示RTAB-Map二维占据栅格、机器人轨迹、RGB-D图像、
+          Nvblox三维网格以及棚架语义对象；
+    \item \textbf{导航交互：}在地图中选取目标位置和目标朝向，通过Nav2动作接口提交或
+          取消导航任务。
+\end{enumerate}
+
+除上述功能需求外，系统还需满足控制模式互斥、输入限幅、通信中断停车及配置修改受限等
+安全要求。需要说明的是，浏览器中的停车按钮、软件看门狗和通信超时均属于软件保护，
+不能替代能够切断驱动动力的实体急停装置。
+
+\subsection{系统总体架构}
+
+系统采用浏览器、Web服务与ROS~2接口、Jetson运动控制、STM32实时执行和电机驱动的分层
+结构，如图\ref{fig:web-architecture}所示。浏览器端由HTML、CSS和JavaScript实现，负责
+产生操作指令并绘制状态信息；Web服务端由Python实现，在同一进程中运行HTTP服务器和
+ROS~2节点，完成HTTP/JSON数据与ROS~2消息、服务及动作之间的转换；Jetson端底盘控制器
+负责运动学解算和轮级约束处理；拟开发的STM32执行层负责上位机通信、双CAN报文调度、
+反馈聚合和超时保护。图中虚线部分为尚待硬件实现的目标链路。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[
+        node distance=8mm and 11mm,
+        block/.style={draw,rounded corners,align=center,minimum height=10mm,
+                      text width=3.25cm,font=\small},
+        line/.style={-Latex,thick}
+    ]
+        \node[block] (browser) {浏览器前端\\状态显示与操作输入};
+        \node[block,right=of browser] (web) {Web服务与ROS~2节点\\HTTP/JSON接口与状态聚合};
+        \node[block,right=of web] (controller) {Jetson运动控制器\\运动学解算与约束处理};
+        \node[block,below=of controller,dashed] (stm) {拟开发STM32执行层\\双CAN调度与安全保护};
+        \node[block,left=of stm] (motor) {执行器\\ZLAC行走驱动器与DM转向电机};
+        \node[block,below=of web] (perception) {感知与导航模块\\RTAB-Map、Nvblox、Nav2};
+
+        \draw[line] (browser)--node[above,font=\scriptsize]{HTTP/JSON} (web);
+        \draw[line] (web)--node[above,font=\scriptsize]{\texttt{Twist}} (controller);
+        \draw[line,dashed] (controller)--node[right,font=\scriptsize]{轮级目标帧} (stm);
+        \draw[line,dashed] (stm)--node[above,font=\scriptsize]{两路CAN} (motor);
+        \draw[line,dashed] (motor) to[bend left=18] node[below,font=\scriptsize]{位置/速度反馈} (stm);
+        \draw[line,dashed] (stm) to[bend left=18] node[right,font=\scriptsize]{聚合反馈} (controller);
+        \draw[line] (controller) to[bend right=25] node[above,font=\scriptsize]{关节与里程计状态} (web);
+        \draw[line] (perception)--node[right,font=\scriptsize]{地图、图像、语义对象} (web);
+        \draw[line] (web) to[bend left=12] node[left,font=\scriptsize]{导航目标} (perception);
+    \end{tikzpicture}
+    \caption{基于Web的机器人监控与遥操作系统架构}
+    \label{fig:web-architecture}
+\end{figure}
+
+当前Web服务节点发布\texttt{/swerve\_controller/cmd\_vel}，四轮四转控制器将车体速度
+转换为四个转向位置目标和四个驱动速度目标。目标方案中，Jetson硬件接口将八个轮级目标、
+工作模式、命令序号和校验信息封装后发送至STM32；STM32再分别通过行走CAN和转向CAN控制
+ZLAC8015D驱动器与DM转向电机。因此，最终网页控制链路可表示为
+\begin{equation}
+\text{浏览器}
+\rightarrow \text{HTTP接口}
+\rightarrow \text{ROS~2速度指令}
+\rightarrow \text{四轮运动学控制器}
+\rightarrow \text{Jetson--STM32接口}
+\rightarrow \text{STM32双CAN调度}
+\rightarrow \text{执行器}.
+\label{eq:web-command-chain}
+\end{equation}
+
+状态反馈沿相反方向传输：STM32计划聚合各执行器位置、速度、在线状态和故障码，并携带
+反馈序号及时间信息返回Jetson；Jetson硬件接口将其转换为ROS~2关节状态，控制器再根据
+轮速反馈计算里程计。Web节点订阅相关话题并转换为浏览器可处理的JSON数据，使操作者能够
+同时观察控制输入、车轮实际状态和机器人位姿变化。STM32接入前，上述CAN收发和反馈转换
+由Jetson侧SocketCAN驱动完成，作为上层功能验证的过渡实现。
+
+\section{前后端通信与ROS~2数据交互}
+
+\subsection{Web服务实现}
+
+Web服务端采用多线程HTTP服务器处理局域网请求，并在主线程中运行ROS~2节点。两类线程
+通过互斥锁保护共享状态，避免HTTP请求与ROS回调同时访问关节、里程计、地图或模式变量时
+产生数据竞争。浏览器与服务端之间采用HTTP请求和JSON数据交换，静态页面与控制接口由
+同一服务端口提供，默认监听端口为8080。
+
+主要接口如表\ref{tab:web-api}所示。读取类接口用于状态刷新和可视化，写入类接口用于
+控制、模式切换、参数修改及标定。服务端对请求字段进行类型、有限值和取值范围检查，
+并使用不同HTTP状态码区分参数错误、状态冲突和服务内部错误。
+
+\begin{table}[htbp]
+    \centering
+    \caption{Web系统主要HTTP接口}
+    \label{tab:web-api}
+    \begin{tabularx}{\textwidth}{p{1.4cm}p{5.1cm}X}
+        \toprule
+        方法 & 接口 & 功能 \\
+        \midrule
+        GET & \texttt{/api/status} & 获取控制模式、控制器、CAN、关节、里程计、诊断及导航状态 \\
+        GET & \texttt{/api/map} & 获取二维占据栅格地图及地图元数据 \\
+        GET & \texttt{/api/scene3d} & 获取降采样后的Nvblox三维环境数据 \\
+        GET & \texttt{/api/racks} & 获取棚架及各层稳定编号、边界和观测状态 \\
+        GET & \texttt{/api/config}、\texttt{/api/chassis} & 获取网页限速和底盘硬件配置 \\
+        POST & \texttt{/api/control/cmd\_vel} & 下发整车纵向、横向和偏航速度 \\
+        POST & \texttt{/api/control/stop} & 取消导航并向运动控制链发送零速度 \\
+        POST & \texttt{/api/mode} & 切换禁止、维护或正常控制模式 \\
+        POST & \texttt{/api/maintenance/command} & 下发单轮维护转角与转速命令 \\
+        POST & \texttt{/api/navigation/goal} & 向Nav2发送目标位姿 \\
+        POST & \texttt{/api/navigation/cancel} & 取消当前导航任务 \\
+        POST & \texttt{/api/calibration/read}、\texttt{/api/calibration/save} & 读取绝对位置并确认保存转向零偏 \\
+        PUT & \texttt{/api/config}、\texttt{/api/chassis} & 更新速度限制或底盘配置 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+为限制非授权访问，系统可通过环境变量设置访问令牌。启用令牌后，写入类请求需要在
+HTTP头中携带认证信息。该措施用于减少局域网内的误操作风险，但当前系统未按公网服务的
+威胁模型设计，因此实际部署时仅允许可信局域网访问，不应直接暴露到互联网。
+
+\subsection{状态数据聚合与刷新}
+
+Web节点订阅的主要ROS~2数据及其页面用途如表\ref{tab:web-ros-topics}所示。不同数据源的
+产生频率和数据量差异较大，前端采用分级轮询方式：系统状态约每0.5~s刷新一次，摄像机
+画面约每1~s刷新一次，三维场景和棚架模型约每1.5~s刷新一次，二维地图约每2~s刷新一次。
+这种设计避免将大体量地图或三维数据与高频控制请求绑定在同一刷新周期内。
+
+\begin{table}[htbp]
+    \centering
+    \caption{Web节点连接的主要ROS~2数据}
+    \label{tab:web-ros-topics}
+    \begin{tabularx}{\textwidth}{p{5.1cm}p{4.0cm}X}
+        \toprule
+        话题或接口 & 数据类型 & 页面用途 \\
+        \midrule
+        \texttt{/joint\_states} & \texttt{sensor\_msgs/JointState} & 四轮转角、轮速及反馈在线状态 \\
+        \texttt{/swerve\_controller/odom} & \texttt{nav\_msgs/Odometry} & 机器人位姿、速度和轨迹显示 \\
+        \texttt{/rtabmap/map} & \texttt{nav\_msgs/OccupancyGrid} & 二维SLAM地图显示与目标点选择 \\
+        \texttt{/rtabmap/localization\_pose} & 定位位姿 & 地图坐标系中的机器人姿态 \\
+        \texttt{/nvblox\_node/mesh} & \texttt{nvblox\_msgs/Mesh} & 三维环境点视图 \\
+        \texttt{/rack\_map/model} & JSON字符串 & 棚架编号、层级、边界和遮挡状态 \\
+        RGB图像与分割调试图像 & \texttt{sensor\_msgs/Image} & 实时图像与目标分割结果 \\
+        \texttt{/navigate\_to\_pose} & Nav2动作接口 & 导航目标提交、反馈与取消 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+二维占据栅格在服务端采用游程编码压缩，并附加版本号。当前端已经持有相同版本时，
+服务端仅返回“数据未变化”标志，从而减少重复传输。Nvblox网格在服务端保存增量网格块，
+并降采样为适合浏览器绘制的彩色三维点集。棚架对象在显示前根据TF关系转换至地图或
+三维场景坐标系；当坐标变换不可用时，系统只显示对象编号列表，而不在不一致坐标系中
+强行叠加其几何位置。
+
+\subsection{Jetson与STM32通信接口设计}
+
+为将现有Jetson直连CAN方案迁移至上下位机分层结构，拟在ROS~2硬件接口与STM32之间定义
+独立的二进制通信协议。物理层可根据控制板资源在USB虚拟串口、USB自定义通信和独立CAN
+链路中选择，但上层数据语义保持一致。相比直接传输编译器内存结构，显式定义帧头、长度、
+协议版本、消息类型和字节序可降低上下位机软件升级造成的不兼容风险。
+
+Jetson向STM32发送的轮级目标帧至少包含表\ref{tab:web-command-frame}所列字段。
+
+\begin{table}[htbp]
+    \centering
+    \caption{拟设计的Jetson至STM32轮级目标帧}
+    \label{tab:web-command-frame}
+    \begin{tabularx}{\textwidth}{p{3.2cm}p{3.0cm}X}
+        \toprule
+        字段 & 建议数据类型 & 作用 \\
+        \midrule
+        帧头与协议版本 & 无符号整数 & 帧同步及上下位机版本兼容检查 \\
+        消息类型与载荷长度 & 无符号整数 & 区分控制、配置、心跳和复位等消息 \\
+        命令序号 & 递增无符号整数 & 识别重复、乱序和长时间未更新的命令 \\
+        工作模式与使能位 & 枚举及位字段 & 明确禁止、正常或维护状态 \\
+        四轮转向目标 & $4\times\mathrm{float32}$ & 四个车轮的目标转角，单位为rad \\
+        四轮驱动目标 & $4\times\mathrm{float32}$ & 四个车轮的目标角速度，单位为rad/s \\
+        上位机时间信息 & 无符号整数 & 用于时效判断和通信性能测量 \\
+        CRC校验 & 无符号整数 & 检测传输错误 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+STM32返回的聚合反馈帧应包含四轮实际转角、四轮实际速度、电机在线位图、执行器故障码、
+两路CAN状态、当前模式、最后接受的命令序号及STM32运行时间。所有转角和角速度分别统一为
+rad和rad/s，轮序固定为左前、右前、左后和右后，避免在Web、ROS~2控制器和STM32固件中
+分别维护不一致的符号约定。
+
+STM32接收目标帧后，先检查帧格式、CRC、协议版本、序号和数据有限性，再检查转角与轮速
+是否处于允许范围。只有全部检查通过才更新执行目标；校验失败、序号长期不变或通信超过
+设定时间时，STM32将驱动轮目标置零并上报故障。该协议及其物理接口属于待实现设计，最终
+字段长度、发送周期和超时阈值需要结合控制板与链路测试确定。
+
+\section{整车运动控制方法}
+
+\subsection{人机交互与速度指令生成}
+
+整车控制页面提供二维虚拟摇杆、偏航旋转滑条、速度比例调节以及前进、后退、横移、
+斜行和原地旋转等典型动作按钮。设摇杆产生的归一化纵向、横向输入分别为
+$u_x,u_y\in[-1,1]$，旋转滑条输入为$u_\omega\in[-1,1]$，速度比例为
+$\lambda\in[0,1]$，则浏览器生成的车体速度为
+\begin{equation}
+    \begin{bmatrix}
+        v_x\\v_y\\\omega_z
+    \end{bmatrix}
+    =
+    \lambda
+    \begin{bmatrix}
+        v_{x,\max}u_x\\
+        v_{y,\max}u_y\\
+        \omega_{z,\max}u_\omega
+    \end{bmatrix},
+    \label{eq:web-normalized-command}
+\end{equation}
+其中，$v_{x,\max}$、$v_{y,\max}$和$\omega_{z,\max}$由服务端配置给出。默认配置分别为
+$0.50~\mathrm{m/s}$、$0.50~\mathrm{m/s}$和$0.80~\mathrm{rad/s}$。服务端收到命令后再次
+进行限幅，因此即使前端输入被修改，发布到ROS~2控制链的速度仍满足
+\begin{equation}
+\begin{aligned}
+    \hat v_x &= \operatorname{sat}(v_x,-v_{x,\max},v_{x,\max}),\\
+    \hat v_y &= \operatorname{sat}(v_y,-v_{y,\max},v_{y,\max}),\\
+    \hat\omega_z &= \operatorname{sat}(\omega_z,-\omega_{z,\max},\omega_{z,\max}),
+\end{aligned}
+\label{eq:web-server-saturation}
+\end{equation}
+式中，$\operatorname{sat}(\cdot)$表示饱和函数。
+
+操作者点击“启用整车控制”后，浏览器首先取消正在执行的导航任务，随后以100~ms周期向
+服务端发送速度命令。再次点击该按钮、点击“立即停车”或离开当前控制页面时，系统发送
+零速度并停止周期发送。浏览器窗口失去焦点、页面转入后台或页面关闭时，也会尝试执行
+同样的停车过程。
+
+\subsection{命令连续性与失联保护}
+
+浏览器属于非实时运行环境，网络延迟、页面调度暂停或设备休眠都可能导致指令中断。
+因此，系统不依赖单次HTTP停车请求作为唯一保护，而采用多层超时机制。正常控制启用后，
+前端以10~Hz频率重复发送最新速度；Jetson端四轮控制器若在0.25~s内未收到新速度指令，
+则主动将运动目标归零。维护控制另设0.5~s命令看门狗。STM32接入后还将独立监测轮级目标
+帧的更新时间，并在Jetson失联时将驱动目标归零；具体阈值在通信实验后确定。
+
+设相邻有效命令的到达间隔为$\Delta t_c$，底盘控制器超时阈值为$T_c$，则命令有效条件为
+\begin{equation}
+    \Delta t_c \leq T_c,
+    \qquad T_c=0.25~\mathrm{s}.
+    \label{eq:web-command-timeout}
+\end{equation}
+当$\Delta t_c>T_c$时，控制器不再保持最后一次非零速度，而是进入零速度状态。该策略能够
+避免浏览器断连后机器人持续执行旧命令。网页停车、控制器超时和驱动器通信保护共同构成
+软件层级的失联保护，但仍不能替代实体急停和现场监护。
+
+\section{工作模式切换与维护控制}
+
+\subsection{三种工作模式}
+
+为避免整车控制与单轮调试同时向相同执行器输出命令，系统设置
+\texttt{DISABLED}、\texttt{NORMAL}和\texttt{MAINTENANCE}三种互斥模式，其含义见表
+\ref{tab:web-modes}。
+
+\begin{table}[htbp]
+    \centering
+    \caption{Web控制系统工作模式}
+    \label{tab:web-modes}
+    \begin{tabularx}{\textwidth}{p{3.1cm}p{4.1cm}X}
+        \toprule
+        模式 & 激活的控制器 & 允许的操作 \\
+        \midrule
+        \texttt{DISABLED} & 无运动控制器激活 & 查看状态、读取标定值及修改底盘配置 \\
+        \texttt{NORMAL} & 四轮四转整车控制器 & 发布车体速度，执行整车遥操作 \\
+        \texttt{MAINTENANCE} & 转向和行走维护控制器 & 对指定轮组进行低速转向与行走测试 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+模式切换通过\texttt{controller\_manager}提供的控制器切换服务完成。切换前系统先发布
+零速度；随后停用当前控制器并激活目标控制器；最后再次查询控制器状态，只有实际状态与
+请求模式一致时才更新页面模式。若切换服务报错、超时或最终状态不一致，系统将逻辑模式
+回退为\texttt{DISABLED}并发送维护停车指令。
+
+进入\texttt{MAINTENANCE}前，操作者必须确认四轮已经架空且现场有人监护。系统同时检查
+四个转向关节反馈是否完整、数值是否有限、更新时间是否超限，以及近期是否出现异常角度
+跳变。任一条件不满足时，维护模式或维护命令将被拒绝。
+
+\subsection{单轮维护命令}
+
+维护页面允许选择一个轮组，并设置行走转速及绝对或相对转向角。设所选轮当前反馈角为
+$\delta_i$，相对输入为$\Delta\delta_i$，绝对输入为$\delta_i^{\mathrm{abs}}$，转向机械范围
+为$[-\delta_{\max},\delta_{\max}]$，则目标角计算为
+\begin{equation}
+    \delta_i^{*}=
+    \begin{cases}
+        \operatorname{sat}(\delta_i+\Delta\delta_i,
+        -\delta_{\max},\delta_{\max}), & \text{相对模式},\\
+        \operatorname{sat}(\delta_i^{\mathrm{abs}},
+        -\delta_{\max},\delta_{\max}), & \text{绝对模式}.
+    \end{cases}
+    \label{eq:web-maintenance-angle}
+\end{equation}
+当前配置中$\delta_{\max}=90^{\circ}$，维护行走转速默认限制为
+$20~\mathrm{r/min}$。超出范围的输入由服务端截断，并在页面中显示修正后的目标值。
+
+维护按钮采用按住执行方式，浏览器在按住期间每100~ms刷新一次命令，释放后立即发送
+零轮速。每次按下均生成唯一命令编号，同一次按住产生的相对角目标只在首帧计算一次，
+后续刷新沿用锁存目标，避免将同一个相对增量重复累加。维护命令超过0.5~s未刷新时，
+服务端将四个驱动轮速度置零，同时保持各转向轮当前反馈角，以减小突然回正带来的风险。
+
+\subsection{转向零位与参数配置}
+
+转向零位标定采用“读取--预览--确认保存”的两阶段流程。只有在
+\texttt{DISABLED}模式下，系统才允许读取DM转向电机绝对位置。服务端根据读取结果和
+当前配置计算建议零偏，返回临时预览标识；操作者确认所选车轮已经机械朝向正前方后，
+才能提交保存请求。预览标识具有有效期，可防止旧读数在车辆状态变化后被误保存。
+
+底盘几何参数、CAN接口、驱动器节点、转向电机标识、方向、零偏和安全上限也可通过网页
+维护。配置保存仅允许在\texttt{DISABLED}模式下进行；服务端在写入前验证数据结构和参数
+范围，并备份原配置。现阶段配置直接供Jetson侧SocketCAN驱动使用。STM32接入后，应将
+由STM32执行的电机映射、总线参数和安全上限纳入带版本及校验的配置同步流程，且只有在
+禁止输出状态下才允许更新。涉及硬件映射和控制器参数的修改需要重启或重新初始化后生效。
+
+\section{状态反馈与可视化实现}
+
+\subsection{底盘状态可视化}
+
+状态总览页面显示Web服务在线状态、两路CAN状态、当前工作模式、活动控制器、关节反馈、
+里程计、诊断结果及最近事件。现阶段CAN状态由Jetson操作系统读取；STM32接入后改为显示
+STM32反馈帧中的两路总线状态和电机在线信息。系统根据底盘几何参数绘制俯视模型，并利用
+\texttt{/joint\_states}实时更新四个车轮的转向角和行走速度。对第$i$个车轮，页面显示的
+转速由关节角速度换算得到：
+\begin{equation}
+    n_i=\omega_i\frac{60}{2\pi},
+    \label{eq:web-rpm-display}
+\end{equation}
+其中，$\omega_i$的单位为$\mathrm{rad/s}$，$n_i$的单位为$\mathrm{r/min}$。页面还根据轮速
+符号标记正向滚动、反向滚动或停止，使操作者能够将软件轮序、方向映射与实物运动对应起来。
+
+\placeholderfigure{6.5cm}
+{Web控制台状态总览与底盘反馈界面截图（待补充）}
+{Web控制台状态总览与四轮状态显示}
+{fig:web-overview}
+
+\subsection{地图、三维环境与语义对象显示}
+
+地图页面优先显示RTAB-Map发布的占据栅格和地图坐标系定位结果；当地图数据不可用时，
+页面退化为以里程计轨迹为基础的网格视图。操作者可在地图中点击选择目标位置，并通过拖动
+确定目标朝向。目标位姿以地图坐标系提交至Nav2，页面持续显示目标是否被接受、剩余距离、
+导航时间以及完成、取消或失败状态。
+
+三维区域提供三种视图：基于关节反馈的底盘模型、Nvblox三维环境点视图和多层棚架语义
+视图。棚架语义视图显示棚架稳定编号、层编号、边界和当前观测状态；短时被遮挡但仍由
+多帧关联保留的层对象采用不同样式显示。该界面既是感知结果的可视化终端，也为后续语义
+建图实验提供人工核验手段。
+
+\placeholderfigure{6.5cm}
+{二维地图、Nvblox三维环境及棚架语义可视化界面截图（待补充）}
+{地图与三维语义环境可视化界面}
+{fig:web-visualization}
+
+实时RGB图像和分割调试图像由ROS图像消息转换为JPEG后提供给浏览器。为避免陈旧图像被
+误认为实时结果，服务端仅返回规定时间范围内更新的图像；当图像或三维数据停止更新时，
+页面明确显示等待或离线状态，而不是继续显示无时间提示的旧数据。
+
+\section{控制安全设计}
+
+Web控制系统采用“交互约束、服务端校验、控制器超时、驱动器保护”四级软件防护结构。
+各级机制及作用见表\ref{tab:web-safety}。
+
+\begin{table}[htbp]
+    \centering
+    \caption{Web控制系统的分层安全机制}
+    \label{tab:web-safety}
+    \begin{tabularx}{\textwidth}{p{3.0cm}X}
+        \toprule
+        层级 & 主要措施 \\
+        \midrule
+        浏览器交互层 & 模式不符时禁用控制按钮；页面失焦、隐藏或关闭时发送停车命令；维护操作采用按住执行 \\
+        Web服务层 & 校验输入类型与有限值；执行速度、转速和转角限幅；检查模式及转向反馈；配置修改限于禁止模式 \\
+        ROS~2控制层 & 控制器互斥切换；0.25~s速度命令超时；有限转角、换向停车及转向对齐联锁 \\
+        STM32执行层（拟实现） & 上位机帧校验、命令超时、双CAN状态检查、执行器故障汇总及安全停车 \\
+        物理安全层 & 实体急停或断电装置、车轮架空调试及现场人员监护 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+其中，前四级机制能够处理常见的软件误操作和通信异常，但不能保证在上位机失效、驱动器
+失控或供电故障等情况下切断能量。因此，物理安全层是实车落地试验的必要条件，不能由Web
+系统代替。
+
+\section{本章小结}
+
+本章介绍了基于Web的机器人监控与遥操作系统。系统以浏览器作为人机交互终端，以兼具
+HTTP服务和ROS~2通信能力的Web节点作为数据桥梁，实现了整车三自由度遥操作、工作模式
+切换、单轮维护、零位标定、参数配置、状态反馈、地图与三维语义环境显示以及导航目标交互。
+现阶段上述功能通过Jetson直连两路SocketCAN的原型链路进行验证；目标系统将在保持Web和
+ROS~2接口不变的基础上增加STM32执行层，使其承担双CAN调度、反馈聚合和独立超时保护。
+通过控制模式互斥、前后端双重限幅、周期命令刷新、控制器超时和反馈联锁，系统建立从网页
+操作到底盘执行的分层保护链。该系统属于机器人平台的工程实现成果，为后续运动学、语义
+建图和有限转角约束运动规划研究提供统一的操作与观测入口。

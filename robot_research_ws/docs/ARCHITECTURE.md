@@ -35,6 +35,7 @@ ament 包必须指向 `robot_research_ws/install`；纯 CMake 的 `openarm_can` 
 两台未分配 D435 -> 安装与标定完成后再决定 observation/context 角色
 三台相机 -> health monitor / rosbag2 / calibration / benchmark
 3D target belief -> active view planner
+Isaac 棚架语义/深度 + 真值 TF -> rack_perception -> 稳定架/层模型、停车候选与对齐误差
 ```
 
 目标感知以后使用 `task_frame` 下的任务局部地图。它不依赖 RTAB-Map、Nvblox 或 Nav2 在线，
@@ -100,6 +101,12 @@ ament 包必须指向 `robot_research_ws/install`；纯 CMake 的 `openarm_can` 
   输出 Nerfstudio `transforms.json`、毫米深度与 RGB-D 稀疏 PLY；采集可与 Nvblox 并行，
   Splatfacto 训练必须放在独立 Python 环境并与 8 GB GPU 上的在线导航错峰运行。每帧保留
   纳秒时间戳，为后续多视角 4DGS 转换预留时间轴。
+- `rack_perception` 与 `sim_rack.launch.py` 已完成 Isaac 三层棚架单架和 4×4 参数化场景
+  仿真基线。2026-10-16 连续脚本巡行 25/25 路点，最终 16 架/48 层，完整地图只出现
+  一套稳定 ID；最大层高误差 0.018 m，架位误差 0.303 m。脚本直接发 `/cmd_vel`，
+  不是 Nav2 自主通行验收；最小估算间隙 0.045 m，真实视觉和安全仍待验证。
+  `sim_rack_navigation.launch.py` 另提供网页控制、RTAB-Map 在线地图、Nav2 与 Nvblox
+  联动；已通过单个同通道短距离 Nav2 目标冒烟，不代表全阵列导航验收。
 
 ## 未实现及建议顺序
 
@@ -118,6 +125,8 @@ ament 包必须指向 `robot_research_ws/install`；纯 CMake 的 `openarm_can` 
 10. [完成] 固定相机底盘主动视角候选、路径评分及人工双门控执行闭环。
 11. [仿真完成，实机待测] 验收可选 Nvblox 单相机 TSDF/Mesh/ESDF；下一步新增独立Nav2
     A/B profile，不覆盖现有点云costmap。
+12. [棚架仿真完成，实机待测] 训练真实层架实例分割并接 D435i，去除 Isaac 架号和真值 TF
+    后复测多架关联；停车位姿、对齐误差与导航控制的闭环由后续阶段实施。
 
 新增 package 按可运行里程碑创建：先
 `mobile_manipulator_description`、`mobile_manipulator_moveit_config`、

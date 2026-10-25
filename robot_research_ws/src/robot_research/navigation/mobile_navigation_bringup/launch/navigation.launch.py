@@ -150,6 +150,7 @@ def generate_launch_description():
             configured_params,
             costmap_overlay,
             {
+                "cmd_vel_in_topic": LaunchConfiguration("cmd_vel_in_topic"),
                 "cmd_vel_out_topic": LaunchConfiguration("cmd_vel_out_topic"),
                 "source_timeout": LaunchConfiguration("collision_source_timeout"),
             },
@@ -195,6 +196,11 @@ def generate_launch_description():
             "navigation_startup_delay",
             default_value="5.0",
             description="Seconds reserved for localization TF before Nav2 activation",
+        ),
+        DeclareLaunchArgument(
+            "cmd_vel_in_topic",
+            default_value="/cmd_vel_smoothed",
+            description="Velocity input to Collision Monitor",
         ),
         DeclareLaunchArgument(
             "cmd_vel_out_topic",

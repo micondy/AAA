@@ -1,0 +1,64 @@
+{
+  "passed": false,
+  "anonymous_instances": true,
+  "interrupted": true,
+  "elapsed_wall_s": 50.67930392499966,
+  "waypoints_reached": 2,
+  "waypoints_total": 25,
+  "resumed_from_waypoint": 0,
+  "model_frames": 290,
+  "final_racks": 8,
+  "final_layers": 25,
+  "maximum_racks": 8,
+  "maximum_layers": 25,
+  "complete_stable_id_sets": 0,
+  "maximum_height_error_m": 0.021879752678632514,
+  "maximum_position_error_m": 3.6722639098177496,
+  "truth_racks_ever_associated": 6,
+  "truth_layers_ever_associated": 19,
+  "rack_id_fragments": {
+    "2": [
+      "rack_0002",
+      "rack_0008"
+    ],
+    "0": [
+      "rack_0010",
+      "rack_0022"
+    ]
+  },
+  "rack_id_switches": {},
+  "layer_id_fragments": {
+    "3:1": [
+      "layer_0004",
+      "layer_0016"
+    ],
+    "3:2": [
+      "layer_0005",
+      "layer_0017"
+    ],
+    "3:3": [
+      "layer_0006",
+      "layer_0018"
+    ],
+    "1:1": [
+      "layer_0020",
+      "layer_0039"
+    ],
+    "1:2": [
+      "layer_0021",
+      "layer_0040",
+      "layer_0045"
+    ],
+    "1:3": [
+      "layer_0022",
+      "layer_0040",
+      "layer_0041"
+    ]
+  },
+  "minimum_clearance_m": 0.46262028213691847,
+  "overlap_risk_samples": 0,
+  "final_position": [
+    0.813674509030534,
+    -6.505432129371911
+  ]
+}

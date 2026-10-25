@@ -24,6 +24,7 @@
 | mapping | `gaussian_splatting_bringup` | 标定 RGB-D 轨迹采集、Nerfstudio 数据和离线训练封装 | `capture.launch.py`、dataset recorder | 数据支线；不进实时控制闭环 |
 | navigation | `mobile_navigation_bringup` | RTAB 定位 + Nav2 + 点云/ESDF costmap + 安全评测 | `mapping.launch.py`、`navigation.launch.py`、仿真入口 | 仿真运行基线；实机待验 |
 | perception | `target_perception` | RGB-D 目标检测、实例分割、三维反投影与跟踪 | detections、target pose、debug topics | 仿真基线；不决定机器人运动 |
+| perception | `rack_perception` | Isaac 层架掩膜、RGB-D 层几何、稳定架/层 ID、停车候选与对齐误差 | `sim_rack.launch.py`、联动入口 `sim_rack_navigation.launch.py`；`/rack_map/model`、`/rack_alignment/errors` | 4×4 仿真基线；真值语义辅助，不直接控制底盘 |
 | planning | `active_perception` | 目标选择、Belief、多视角候选、路径评分与执行门控 | belief/NBV launch、plan/execute/cancel services | 仿真闭环；执行默认关闭 |
 | integration | `mobile_manipulator_description` | 底盘、双 OpenArm、D435i 的统一 URDF | `display.launch.py`、统一 TF/robot_description | 运行基线；相机实测外参待填 |
 | integration | `mobile_manipulator_moveit_config` | 双臂 MoveIt 配置、控制器映射、碰撞模型 | `demo.launch.py`、MoveGroup actions/services | mock 基线；不负责底盘导航 |
@@ -65,5 +66,8 @@
 | `/nvblox_node/static_map_slice` | Nvblox | 可选 Nav2 Nvblox costmap layer |
 | `/target_perception/tracked_detections_3d` | target_perception | target selector / belief |
 | `/active_perception/target_belief` | active_perception | NBV planner / executor / 评测 |
+| `/rack_detector/instance_mask` | rack_detector | rack_geometry、调试工具 |
+| `/rack_map/model`、`/rack_map/markers` | rack_map | harvest_planner、rack_alignment、RViz |
+| `/rack_alignment/errors` | rack_alignment | 调试与未来的停车控制器；当前未接入自动控制 |
 
 接口改名必须同时搜索 launch remap、YAML、网页配置、测试和本文档。

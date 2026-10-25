@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-16",
+  "scenario": "Isaac 4x4 rack grid with rack perception, web console, online RTAB-Map, Nav2 and nvblox",
+  "launch": "ros2 launch mobile_manipulator_bringup sim_rack_navigation.launch.py headless:=true test_seconds:=180 database_path:=/media/scc/Windows_D/AAA/robot_research_ws/results/rack/rtabmap_joint_precise_20261016.db",
+  "runtime": {
+    "nav2_managed_nodes": "active",
+    "collision_monitor": "active",
+    "tf_map_to_base_link": "connected",
+    "cmd_vel_publisher": "collision_monitor",
+    "xy_goal_tolerance_m": 0.08
+  },
+  "web": {
+    "http_root_status": 200,
+    "map_width_cells": 125,
+    "map_height_cells": 215,
+    "map_resolution_m": 0.05,
+    "map_free_cells": 4526,
+    "map_occupied_cells": 346,
+    "scene3d_available": true,
+    "scene3d_mesh_blocks": 304,
+    "scene3d_vertices": 16706
+  },
+  "manual_control": {
+    "mode": "NORMAL",
+    "command_linear_x_m_s": 0.12,
+    "command_duration_s": 2.0,
+    "odom_advance_m": 0.235490605,
+    "collision_monitor_in_chain": true
+  },
+  "nav2_goal": {
+    "source": "web API",
+    "target_xy_m": [0.585877636, 0.0],
+    "yaw_rad": 0.0,
+    "action_result": "SUCCEEDED",
+    "elapsed_s_approx": 4.0,
+    "final_odom_x_m_approx": 0.517,
+    "remaining_distance_m": 0.070913
+  },
+  "rack_perception": {
+    "currently_visible_racks": 4,
+    "currently_visible_layers": 12,
+    "unique_rack_ids": 4,
+    "unique_layer_ids": 12,
+    "maximum_observed_layer_height_error_m": 0.0071908
+  },
+  "scope_note": "Single short same-aisle Nav2 target and manual web movement only. Not a 4x4 Nav2 traversal, complete greenhouse mapping-quality test, parking-controller execution, or physical collision-safety validation. Full-grid scripted perception route is in grid_acceptance.json."
+}

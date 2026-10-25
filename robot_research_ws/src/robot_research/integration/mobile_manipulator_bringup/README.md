@@ -3,6 +3,32 @@
 整机的 profile 编排层。它不实现底盘运动学、不复制 OpenArm 驱动，也不修改两个下层项目；
 只把组合 URDF、MoveIt、官方 OpenArm 控制器和已有四轮四转控制器组织为一致的运行入口。
 
+## 棚架、网页与在线导航联合 profile
+
+从全部关闭的状态，只运行这一条入口即可启动 4×4 独立三层架、Isaac RGB-D、
+架/层感知、RTAB-Map 在线建图、Nav2、Nvblox 和网页：
+
+```bash
+cd /media/scc/Windows_D/AAA/robot_research_ws
+source tools/source_robot_stack.bash
+colcon build --symlink-install --packages-select mobile_navigation_bringup mobile_manipulator_bringup
+source tools/source_robot_stack.bash
+ros2 launch mobile_manipulator_bringup sim_rack_navigation.launch.py
+```
+
+浏览器打开 `http://127.0.0.1:8080/#visualization`，切到 NORMAL 模式再手动低速移动；
+地图是随运动生成的，不是预先加载的静态温室地图。Nav2 目标也可从网页发送。
+默认数据库 `~/.ros/rack_grid4x4_online.db` 会保留，必要时用
+`database_path:=/另一个/新文件.db` 开始独立实验，勿直接删除已有数据。
+网页的二维地图叠加架号，三维场景和编号列表显示每层稳定 ID；
+`/rack_map/model` 与 RViz `/rack_map/markers` 可交叉核对。
+`use_rviz:=true` 可同时打开 RViz，固定坐标系选 `sim_world`。
+
+本 profile 中网页和 Nav2 经优先级 mux、Collision Monitor 后才进入 Isaac `/cmd_vel`。
+2026-10-16 已验证短距离网页控制和单个同通道 Nav2 目标；没有验证 4×4 全通道
+Nav2 路径、自动停车执行或真实底盘安全。记录见
+[`results/rack/web_nav2_smoke_20261016.json`](../../../../results/rack/web_nav2_smoke_20261016.json)。
+
 ## Mock profile
 
 ```bash

@@ -6,11 +6,12 @@
 
 ## 阅读路径
 
-1. 本页：系统边界、分层和部署关系。
-2. [运行时数据流](RUNTIME_FLOWS.md)：建图、导航、网页、三维重建和主动感知的时序。
-3. [包目录](PACKAGE_CATALOG.md)：每个 ROS 包的职责、入口、关键接口和边界。
-4. [维护规则](MAINTENANCE.md)：新增包、话题、启动 profile 时必须更新的内容及自动检查。
-5. [实施状态](../ARCHITECTURE.md)：已经完成、尚未完成及验证证据。
+1. [工程交接文档](../HANDOFF.md)：整体能力、启动方式、限制与下一步。
+2. 本页：系统边界、分层和部署关系。
+3. [运行时数据流](RUNTIME_FLOWS.md)：建图、导航、网页、三维重建和主动感知的时序。
+4. [包目录](PACKAGE_CATALOG.md)：每个 ROS 包的职责、入口、关键接口和边界。
+5. [维护规则](MAINTENANCE.md)：新增包、话题、启动 profile 时必须更新的内容及自动检查。
+6. [实施状态](../ARCHITECTURE.md)：已经完成、尚未完成及验证证据。
 
 ## 系统上下文
 
@@ -85,6 +86,7 @@ flowchart TB
     subgraph Perception[感知与传感]
       Camera[D435i Bringup]
       Target[Target Perception<br/>2D/3D 检测与跟踪]
+      Rack[Rack Perception<br/>层架几何 / 稳定 ID / 对齐误差]
       Exp[Experiment Tools<br/>健康检查 / rosbag]
     end
 
@@ -104,6 +106,8 @@ flowchart TB
     RTAB --> Nav2
     Nvblox --> Nav2
     Camera --> Target
+    Camera --> Rack
+    Rack --> RViz
     Camera --> RTAB
     Camera --> Nvblox
     Camera --> GS
@@ -129,6 +133,7 @@ TF 必须只有一个所有者，禁止为“让可视化先亮起来”而重�
 | `base_link -> robot links` | `robot_state_publisher` | 来自统一 URDF 与关节状态 |
 | `base_link -> nav_camera_*` | 整机描述 | 真机外参需标定；仿真使用 nominal 光学帧 |
 | `world -> odom` | 指定仿真/测试 profile | 普通实机导航不应伪造 |
+| `odom -> sim_world` | 棚架 Isaac 仿真 profile | 真值场景坐标；避免与 RTAB-Map 的 `map -> odom` 争夺 odom 父节点，不是实机定位来源 |
 
 ## 部署视图
 

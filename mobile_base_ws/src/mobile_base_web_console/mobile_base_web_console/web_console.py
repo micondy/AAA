@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+import cv2
+from cv_bridge import CvBridge, CvBridgeError
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from controller_manager_msgs.srv import ListControllers, SwitchController
@@ -28,9 +30,11 @@ from nav2_msgs.action import NavigateToPose
 from nvblox_msgs.msg import Mesh
 from rclpy.action import ActionClient
 from rclpy.node import Node
-from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import JointState
-from std_msgs.msg import Float64MultiArray
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
+from rclpy.time import Time
+from sensor_msgs.msg import Image, JointState
+from std_msgs.msg import Float64MultiArray, String
+from tf2_ros import Buffer, TransformException, TransformListener
 
 from .chassis_config import ChassisConfigManager, WHEEL_NAMES
 from .config import ConfigManager
@@ -72,6 +76,67 @@ def _run_length_encode(values: list[int]) -> list[int]:
     return encoded
 
 
+def _transform_point(point: list[float], transform: Any) -> list[float]:
+    """Apply a full 3-D TF to one rack point; mesh and map frames may differ."""
+    q = transform.transform.rotation
+    t = transform.transform.translation
+    x, y, z = (float(value) for value in point)
+    # Quaternion vector rotation: v + 2*w*(q_xyz x v) + 2*(q_xyz x (q_xyz x v)).
+    tx, ty, tz = 2 * (q.y * z - q.z * y), 2 * (q.z * x - q.x * z), 2 * (q.x * y - q.y * x)
+    return [
+        x + q.w * tx + q.y * tz - q.z * ty + t.x,
+        y + q.w * ty + q.z * tx - q.x * tz + t.y,
+        z + q.w * tz + q.x * ty - q.y * tx + t.z,
+    ]
+
+
+def _transform_direction(vector: list[float], transform: Any) -> list[float]:
+    """Rotate an XY rack direction without translating it."""
+    if transform is None:
+        return [float(vector[0]), float(vector[1])]
+    point = _transform_point([float(vector[0]), float(vector[1]), 0.0], transform)
+    offset = transform.transform.translation
+    x, y = point[0] - offset.x, point[1] - offset.y
+    length = math.hypot(x, y)
+    return [x / length, y / length] if length > 1e-9 else [0.0, 0.0]
+
+
+def _project_racks(model: dict[str, Any], transform: Any | None) -> list[dict[str, Any]]:
+    projected = []
+    for rack in model.get("racks", []):
+        try:
+            position = rack["position"]
+            layers = rack["layers"]
+            projected.append({
+                "stable_id": str(rack["stable_id"]),
+                "position": _transform_point(position, transform) if transform else position,
+                "layers": [{
+                    "stable_id": str(layer["stable_id"]),
+                    "level_number": int(layer["level_number"]),
+                    "center": _transform_point(layer["center"], transform) if transform else layer["center"],
+                    "boundary": [
+                        _transform_point(point, transform) if transform else point
+                        for point in layer.get("boundary", [])
+                    ],
+                    "front_center": (
+                        _transform_point(layer["front_center"], transform)
+                        if transform and "front_center" in layer else layer.get("front_center")
+                    ),
+                    "axis": _transform_direction(layer["axis"], transform) if "axis" in layer else None,
+                    "front_normal": (
+                        _transform_direction(layer["front_normal"], transform)
+                        if "front_normal" in layer else None
+                    ),
+                    "observed": bool(layer["observed"]),
+                    "observed_ratio": float(layer.get("observed_ratio", 1.0)),
+                    "confidence": float(layer.get("confidence", 0.0)),
+                } for layer in layers],
+            })
+        except (KeyError, TypeError, ValueError):
+            continue
+    return projected
+
+
 class WebConsoleNode(Node):
     def __init__(self, share_dir: Path):
         super().__init__("mobile_base_web_console")
@@ -89,6 +154,12 @@ class WebConsoleNode(Node):
         self.map_data: dict[str, Any] = {}
         self.last_map_time = 0.0
         self.map_revision = 0
+        self.map_frame = ""
+        self.rack_model: dict[str, Any] = {}
+        self.last_rack_time = 0.0
+        self.camera_bridge = CvBridge()
+        self.camera_jpegs: dict[str, bytes] = {}
+        self.camera_times: dict[str, float] = {}
         self.mesh_blocks: dict[tuple[int, int, int], Any] = {}
         self.mesh_block_size = 0.0
         self.mesh_frame = ""
@@ -129,6 +200,17 @@ class WebConsoleNode(Node):
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
         )
         self.create_subscription(OccupancyGrid, topics["map"], self._on_map, map_qos)
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        self.create_subscription(String, "/rack_map/model", self._on_rack_model, map_qos)
+        self.create_subscription(
+            Image, "/sensors/nav_camera/color/image_raw",
+            lambda message: self._on_camera_image("rgb", message), qos_profile_sensor_data,
+        )
+        self.create_subscription(
+            Image, "/rack_detector/debug/color_mask",
+            lambda message: self._on_camera_image("mask", message), qos_profile_sensor_data,
+        )
         self.create_subscription(Mesh, topics["nvblox_mesh"], self._on_mesh, 10)
         self.create_subscription(
             PoseWithCovarianceStamped, topics["localization_pose"],
@@ -208,6 +290,7 @@ class WebConsoleNode(Node):
         }
         with self.lock:
             self.map_revision += 1
+            self.map_frame = message.header.frame_id
             snapshot["revision"] = self.map_revision
             self.map_data = snapshot
             self.last_map_time = time.monotonic()
@@ -223,6 +306,75 @@ class WebConsoleNode(Node):
             result = dict(self.map_data)
             result.update({"available": True, "unchanged": False, "age": age})
             return result
+
+    def _on_rack_model(self, message: String) -> None:
+        try:
+            model = json.loads(message.data)
+            if model.get("schema") != "rack_map/v1" or not model.get("frame_id"):
+                raise ValueError("unsupported rack model")
+        except (json.JSONDecodeError, AttributeError, ValueError):
+            self.get_logger().warning("忽略格式不合法的层架模型")
+            return
+        with self.lock:
+            self.rack_model = model
+            self.last_rack_time = time.monotonic()
+
+    def _on_camera_image(self, kind: str, message: Image) -> None:
+        """Keep a bounded-rate JPEG snapshot for the local visualization page."""
+        now = time.monotonic()
+        if now - self.camera_times.get(kind, 0.0) < 0.2:
+            return
+        try:
+            bgr = self.camera_bridge.imgmsg_to_cv2(message, desired_encoding="bgr8")
+            ok, encoded = cv2.imencode(".jpg", bgr, [cv2.IMWRITE_JPEG_QUALITY, 75])
+            if not ok:
+                return
+        except (CvBridgeError, cv2.error):
+            return
+        with self.lock:
+            self.camera_jpegs[kind] = encoded.tobytes()
+            self.camera_times[kind] = now
+
+    def camera_snapshot(self, kind: str) -> bytes | None:
+        with self.lock:
+            image = self.camera_jpegs.get(kind)
+            updated = self.camera_times.get(kind, 0.0)
+        return image if image and time.monotonic() - updated < 3.0 else None
+
+    def rack_snapshot(self) -> dict[str, Any]:
+        with self.lock:
+            model = self.rack_model
+            age = time.monotonic() - self.last_rack_time if self.last_rack_time else None
+            map_frame = self.map_frame
+            mesh_frame = self.mesh_frame
+        if not model:
+            return {"available": False, "racks": [], "map_racks": [], "scene_racks": []}
+        source = model["frame_id"]
+        # Match the SLAM map when available; only fall back to odom before a map exists.
+        # With nvblox enabled, use its mesh frame so point and rack overlays agree.
+        scene_frame = mesh_frame or map_frame or "odom"
+        result: dict[str, Any] = {
+            "available": True, "frame_id": source, "age": age,
+            "racks": _project_racks(model, None),
+            "map_frame": map_frame, "scene_frame": scene_frame,
+            "map_racks": [], "scene_racks": [],
+        }
+        for key, target in (("map_racks", map_frame), ("scene_racks", scene_frame)):
+            if not target:
+                continue
+            if key == "scene_racks" and target == map_frame:
+                result[key] = result["map_racks"]
+                continue
+            if target == source:
+                result[key] = result["racks"]
+                continue
+            try:
+                tf = self.tf_buffer.lookup_transform(target, source, Time())
+                result[key] = _project_racks(model, tf)
+            except TransformException:
+                # Never draw a rack in a mismatched frame.
+                pass
+        return result
 
     def _on_mesh(self, message: Mesh) -> None:
         """Cache incremental nvblox mesh blocks for the lightweight web viewer."""
@@ -915,6 +1067,20 @@ class ConsoleRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
+        if path in ("/api/camera/rgb.jpg", "/api/camera/mask.jpg"):
+            kind = "rgb" if path.endswith("rgb.jpg") else "mask"
+            payload = self.server.node.camera_snapshot(kind)
+            if payload is None:
+                self._error(HTTPStatus.SERVICE_UNAVAILABLE, "相机画面尚未就绪")
+                return
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         if path == "/api/status":
             self._send_json(HTTPStatus.OK, self.server.node.status())
             return
@@ -932,6 +1098,9 @@ class ConsoleRequestHandler(BaseHTTPRequestHandler):
                 revision = -1
             self._send_json(HTTPStatus.OK, self.server.node.mesh_snapshot(revision))
             return
+        if path == "/api/racks":
+            self._send_json(HTTPStatus.OK, self.server.node.rack_snapshot())
+            return
         if path == "/api/config":
             self._send_json(HTTPStatus.OK, self.server.node.config_manager.get())
             return
@@ -940,7 +1109,8 @@ class ConsoleRequestHandler(BaseHTTPRequestHandler):
             return
         static_files = {
             "/": "index.html", "/index.html": "index.html", "/app.css": "app.css",
-            "/maintenance.css": "maintenance.css", "/visualization.css": "visualization.css", "/app.js": "app.js",
+            "/maintenance.css": "maintenance.css", "/visualization.css": "visualization.css",
+            "/rack_scene.js": "rack_scene.js", "/app.js": "app.js",
         }
         if path == "/favicon.ico":
             self.send_response(HTTPStatus.NO_CONTENT)

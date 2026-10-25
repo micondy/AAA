@@ -1,0 +1,482 @@
+\documentclass[UTF8,openany,12pt,a4paper]{ctexrep}
+\usepackage[a4paper,top=2.8cm,bottom=2.6cm,left=3.0cm,right=2.6cm]{geometry}
+\usepackage{amsmath,amssymb,bm,booktabs,array,longtable,multirow}
+\usepackage{graphicx,float,caption,subcaption,tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric}
+\usepackage{algorithm,algpseudocode,siunitx,xcolor,hyperref,cleveref}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!60!black}
+\captionsetup{font=small,labelsep=quad}
+\setlength{\parindent}{2em}
+\renewcommand{\arraystretch}{1.25}
+\newcommand{\placeholder}[1]{\textcolor{red!70!black}{【待实测/待确认：#1】}}
+\newcommand{\trans}{^{\mathsf T}}
+
+\title{面向温室环境的四轮独立转向移动机器人\\分层控制与自主导航系统设计\\[1em]\large 技术部分初稿}
+\author{作者姓名：\placeholder{填写姓名}\qquad 导师：\placeholder{填写导师}}
+\date{\today}
+
+\begin{document}
+\maketitle
+\pagenumbering{Roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+% 本稿优先完成技术主体。摘要、应用背景及最终实验数据在系统实现后补充。
+\chapter{绪论与技术路线}
+\section{研究对象与问题定义}
+本文研究对象为四轮独立转向、四轮独立驱动（4WIS4WID）移动机器人。机器人以Jetson Orin为上位计算平台，以STM32为实时底盘控制器，四组转向执行器和四组驱动执行器通过CAN总线受控。二维激光雷达和深度相机分别通过USB直接连接Jetson Orin。本文不改变该实际硬件连接关系，也不将尚未部署的传感器或算法写成已完成系统。
+
+与差速底盘相比，4WIS4WID底盘可在平面内独立调节纵向速度、横向速度和偏航角速度，但八个执行器之间存在刚体运动相容约束、转向角与轮速等价解、转向限位、速度与加速度饱和等问题。本文将研究问题定义为：给定导航层输出的期望车体速度或参考轨迹，在满足执行器约束和通信实时性的前提下，求取连续、相容的四轮转角与驱动轮速，并利用多源观测完成定位、建图和自主导航。
+
+\section{论文技术路线与章节关系}
+相关4WIS4WID研究通常依次给出实验平台、运动学或动力学模型、控制器设计、稳定性或约束分析，以及仿真和实机验证\cite{lee2015,petrovic2024,lee2026}。结合本系统的工程目标，本文采用图\ref{fig:route}所示技术路线。
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=7mm and 8mm,box/.style={draw,rounded corners,align=center,minimum width=30mm,minimum height=10mm,font=\small},arr/.style={-Latex,thick}]
+\node[box] (plant) {物理平台与接口\\几何/电气/通信参数};
+\node[box,right=of plant] (model) {运动学模型\\正逆解与约束};
+\node[box,right=of model] (ctrl) {分层控制\\分配、内环与安全};
+\node[box,below=of ctrl] (nav) {规划与跟踪\\全局路径和局部控制};
+\node[box,left=of nav] (est) {状态估计\\里程计、定位与建图};
+\node[box,left=of est] (exp) {分级实验\\模型、控制、导航验证};
+\draw[arr] (plant)--(model); \draw[arr] (model)--(ctrl); \draw[arr] (ctrl)--(nav);
+\draw[arr] (nav)--(est); \draw[arr] (est)--(exp); \draw[arr] (exp)--(plant);
+\end{tikzpicture}
+\caption{论文技术路线及验证闭环}\label{fig:route}
+\end{figure}
+
+第2章固化实际硬件拓扑和系统边界；第3章建立可直接用于控制和里程计计算的完整运动学模型；第4章说明Jetson Orin、STM32和电机驱动器之间的控制分工、CAN协议及安全状态机；第5章建立感知、坐标变换和状态估计链路；第6章给出适应全向底盘与有限转向约束的规划和跟踪方法；第7章落实ROS~2节点、话题、QoS与时序；第8章给出不含虚构结果的实验方案、统计方法和评价指标。
+
+\chapter{机器人系统总体设计}
+\section{设计需求与系统边界}
+系统设计需求分为运动能力、导航能力、实时性和安全性四类。运动能力要求底盘实现纵向、横向、原地转向和复合运动；导航能力要求在已知或待建地图中完成目标点导航并对动态或临时障碍物作出响应；实时性要求底层控制周期稳定、命令延迟可测；安全性要求在通信超时、总线异常或执行器故障时进入确定的安全状态。各项指标的目标值应根据实机能力填写，见表\ref{tab:req}。
+
+\begin{table}[H]\centering
+\caption{系统技术指标及验证方式}\label{tab:req}
+\begin{tabular}{p{3.0cm}p{5.0cm}p{3.2cm}p{3.1cm}}
+\toprule 类别 & 指标定义 & 目标值 & 验证方法\\ \midrule
+运动能力 & 最大纵/横向速度、最大偏航角速度 & \placeholder{填写} & 标准地面阶跃与匀速试验\\
+转向能力 & 转角范围、稳态误差、响应时间 & \placeholder{填写} & 单轮与四轮同步试验\\
+通信性能 & 周期、端到端延迟、丢帧率、抖动 & \placeholder{填写} & CAN抓包和时间戳分析\\
+定位性能 & 绝对轨迹误差与相对位姿误差 & \placeholder{填写} & 外部基准或人工测量\\
+导航性能 & 成功率、最小间距、任务时间 & \placeholder{填写} & 多场景重复试验\\
+安全性能 & 命令超时及急停响应时间 & \placeholder{填写} & 故障注入试验\\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section{硬件组成与通信拓扑}
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=8mm and 13mm,block/.style={draw,rounded corners,align=center,minimum width=38mm,minimum height=11mm,font=\small},bus/.style={<->,very thick},sensor/.style={->,thick}]
+\node[block] (jetson) {Jetson Orin\\ROS 2、感知、估计、规划};
+\node[block,below=15mm of jetson] (stm) {STM32底盘控制器\\硬实时控制与安全管理};
+\node[block,below left=15mm and -1mm of stm] (steer) {4组转向电机及驱动器\\位置控制/状态反馈};
+\node[block,below right=15mm and -1mm of stm] (drive) {4组驱动电机及驱动器\\速度控制/状态反馈};
+\node[block,left=16mm of jetson] (lidar) {USB激光雷达};
+\node[block,right=16mm of jetson] (camera) {USB深度相机};
+\draw[bus] (jetson)--node[right,font=\small]{CAN$_1$} (stm);
+\draw[bus] (stm)--node[left,font=\small]{CAN$_2$或同总线} (steer);
+\draw[bus] (stm)--node[right,font=\small]{CAN$_2$或同总线} (drive);
+\draw[sensor] (lidar)--node[above,font=\small]{USB} (jetson);
+\draw[sensor] (camera)--node[above,font=\small]{USB} (jetson);
+\end{tikzpicture}
+\caption{严格按实物连接关系绘制的硬件通信拓扑}\label{fig:hardware}
+\end{figure}
+
+图\ref{fig:hardware}中CAN$_1$和CAN$_2$仅表示逻辑链路。二者是否使用独立物理总线、具体位速率、终端电阻、隔离方式和节点编号，均应以接线与驱动器手册为准。本文不假定Jetson Orin直接控制电机；所有电机命令和反馈均由STM32统一调度。
+
+\section{功能分层与数据闭环}
+\begin{table}[H]\centering
+\caption{系统分层、输入输出与部署位置}
+\begin{tabular}{p{2.5cm}p{2.8cm}p{4.0cm}p{4.4cm}}
+\toprule 层次 & 部署位置 & 主要输入 & 主要输出\\ \midrule
+任务与规划层 & Jetson Orin & 地图、目标位姿、机器人状态 & 全局路径、期望车体速度\\
+定位与感知层 & Jetson Orin & 激光、深度、轮式里程计 & 位姿、局部障碍物、代价地图\\
+运动分配层 & \placeholder{Jetson或STM32择一} & $(v_x^d,v_y^d,\omega_z^d)$ & $\{\delta_i^d,\dot\phi_i^d\}_{i=1}^4$\\
+实时控制层 & STM32 & 执行器目标与反馈 & 电机报文、底盘状态、故障码\\
+执行层 & CAN驱动器 & 位置/速度/转矩设定值 & 编码器、电流、温度、告警\\ \bottomrule
+\end{tabular}
+\end{table}
+
+运动学逆解只能在一个计算节点执行。若在Jetson端执行，CAN$_1$需传输8个执行器目标；若在STM32端执行，CAN$_1$只传输三个车体速度分量，带宽更低且安全逻辑集中。考虑底层实时性和通信中断后的可控停车，本文建议将逆解、限幅和执行器同步部署于STM32，而将路径跟踪与约束生成部署于Jetson。最终实现位置需以源代码和实测周期为证。
+
+\section{控制时序与信息流}
+定义导航周期$T_p$、上位机底盘接口周期$T_b$、STM32控制周期$T_c$和驱动器内部环周期$T_m$。工程上应满足$T_m<T_c\leq T_b<T_p$，但具体数值必须实测。每条指令携带序号和时间戳；STM32仅接受序号更新且校验正确的报文，并以固定周期向驱动器发送目标值。反馈数据先在STM32聚合，再统一上报Jetson，从而形成“轨迹—车体速度—轮级目标—执行器反馈—里程计—定位”的闭环。
+
+\chapter{四轮独立转向底盘运动学建模}
+\section{建模假设、坐标系与符号}
+建立世界坐标系$\{W\}$和车体坐标系$\{B\}$。$\{B\}$的原点$O$取底盘几何中心，$x_B$轴向前，$y_B$轴向左，$z_B$轴向上。世界坐标系下位姿为$\bm q=[x,y,\psi]\trans$，车体速度为$\bm\xi=[v_x,v_y,\omega_z]\trans$。第$i$个转向轴中心在$\{B\}$中的位置为$\bm p_i=[x_i,y_i]\trans$，车轮半径为$r_i$，转角为$\delta_i$，驱动角速度为$\dot\phi_i$。
+
+本章首先采用以下假设：（1）底盘为平面刚体；（2）车轮纯滚动且侧向速度为零；（3）车轮半径已标定；（4）转向轴中心与等效接地点偏置暂忽略；（5）结构变形和轮胎弹性在低速下可忽略。后续通过残差与实测数据判断上述假设是否成立。若转向主销偏置不可忽略，应在轮心速度中加入由$\dot\delta_i$产生的偏置速度项。
+
+\section{世界坐标与车体速度映射}
+世界坐标下的位姿变化率与车体速度满足
+\begin{equation}
+\dot{\bm q}=\bm R(\psi)\bm\xi,
+\quad \bm R(\psi)=\begin{bmatrix}\cos\psi&-\sin\psi&0\\\sin\psi&\cos\psi&0\\0&0&1\end{bmatrix}.
+\label{eq:pose}
+\end{equation}
+机器人刚体上第$i$个轮心的速度为
+\begin{equation}
+\bm v_i=\begin{bmatrix}v_{ix}\\v_{iy}\end{bmatrix}
+=\begin{bmatrix}v_x-\omega_z y_i\\v_y+\omega_z x_i\end{bmatrix}
+=\bm A_i\bm\xi,\quad
+\bm A_i=\begin{bmatrix}1&0&-y_i\\0&1&x_i\end{bmatrix}.
+\label{eq:wheelcenter}
+\end{equation}
+
+\section{单轮无侧滑约束与逆运动学}
+车轮滚动方向和侧向方向的单位向量分别为
+\begin{equation}
+\bm t_i=[\cos\delta_i,\sin\delta_i]\trans,\quad
+\bm n_i=[-\sin\delta_i,\cos\delta_i]\trans.
+\end{equation}
+纯滚动约束可写为
+\begin{equation}
+\bm t_i\trans\bm v_i=r_i\dot\phi_i,\qquad \bm n_i\trans\bm v_i=0.
+\label{eq:rolling}
+\end{equation}
+给定期望车体速度$\bm\xi^d$，定义
+\begin{equation}a_i=v_x^d-\omega_z^d y_i,\qquad b_i=v_y^d+\omega_z^d x_i.\end{equation}
+当$a_i^2+b_i^2>\varepsilon_v^2$时，一组逆解为
+\begin{equation}
+\delta_i^0=\operatorname{atan2}(b_i,a_i),\qquad
+\dot\phi_i^0=\frac{\sqrt{a_i^2+b_i^2}}{r_i}.
+\label{eq:ik}
+\end{equation}
+当轮心目标速度接近零时，$\delta_i$不唯一。此时保持上一时刻转角可避免静止状态下的无意义转向。
+
+设车体半长为$l$、半宽为$d$，按左前、左后、右后、右前编号，则
+\begin{equation}
+\bm p_1=(l,d),\quad \bm p_2=(-l,d),\quad \bm p_3=(-l,-d),\quad \bm p_4=(l,-d).
+\end{equation}
+将其代入式\eqref{eq:wheelcenter}即可得到四个轮心速度。该向量形式比逐轮罗列公式更便于程序实现，也可直接扩展至几何参数不完全对称的实物平台。
+
+\section{正运动学与加权最小二乘里程计}
+由编码器得到$\hat\delta_i$和$\hat{\dot\phi}_i$后，单轮测得的滚动速度向量为
+\begin{equation}
+\hat{\bm v}_i=r_i\hat{\dot\phi}_i\begin{bmatrix}\cos\hat\delta_i\\\sin\hat\delta_i\end{bmatrix}.
+\end{equation}
+将四轮方程堆叠为
+\begin{equation}
+\hat{\bm v}=\bm A\bm\xi+\bm e,\quad
+\bm A=[\bm A_1\trans,\bm A_2\trans,\bm A_3\trans,\bm A_4\trans]\trans.
+\end{equation}
+在测量噪声和轻微滑移下，车体速度可由加权最小二乘估计
+\begin{equation}
+\hat{\bm\xi}=(\bm A\trans\bm W\bm A)^{-1}\bm A\trans\bm W\hat{\bm v},
+\label{eq:wls}
+\end{equation}
+其中$\bm W$为观测权重矩阵。若某轮驱动器告警、电流异常或滚动约束残差过大，可降低对应权重，而不是直接继续等权融合。
+
+定义第$i$轮的相容性残差
+\begin{equation}e_i=\left\|\hat{\bm v}_i-\bm A_i\hat{\bm\xi}\right\|_2.\end{equation}
+残差用于检测轮胎滑移、编码器异常和轮径标定误差。里程计离散更新采用中点航向：
+\begin{align}
+x_{k+1}&=x_k+\Delta t(v_{x,k}\cos\bar\psi_k-v_{y,k}\sin\bar\psi_k),\\
+y_{k+1}&=y_k+\Delta t(v_{x,k}\sin\bar\psi_k+v_{y,k}\cos\bar\psi_k),\\
+\psi_{k+1}&=\psi_k+\Delta t\,\omega_{z,k},
+\end{align}
+其中$\bar\psi_k=\psi_k+\omega_{z,k}\Delta t/2$。协方差不能固定为任意常数，应根据重复试验和残差统计标定。
+
+\section{转角等价解与最小转向量分配}
+轮胎速度向量具有如下等价性：
+\begin{equation}(\delta_i,\dot\phi_i)\equiv(\delta_i+k\pi,(-1)^k\dot\phi_i),\quad k\in\mathbb Z.\end{equation}
+因此每个控制周期生成正向解和反向解两个主要候选，在满足机械转角限制后，选择代价较小者：
+\begin{equation}
+J_i(k)=w_\delta\operatorname{wrap}(\delta_i^{(k)}-\delta_{i,k-1})^2
++w_\phi(\dot\phi_i^{(k)}-\dot\phi_{i,k-1})^2
++w_s\mathbb I[s_i^{(k)}\neq s_{i,k-1}],
+\label{eq:candidate}
+\end{equation}
+约束为
+\begin{equation}
+\delta_{i,\min}\leq\delta_i^{(k)}\leq\delta_{i,\max},\quad
+|\dot\phi_i^{(k)}|\leq\dot\phi_{i,\max}.
+\end{equation}
+$\mathbb I[\cdot]$为指示函数，$s_i$表示轮速符号。第三项用于抑制低速附近的频繁正反转。若两个候选均不满足限位，控制器应重新缩放车体命令或停车，不能仅截断转角后保持原轮速，因为后者会破坏刚体运动相容性。
+
+\begin{algorithm}[H]
+\caption{有限转角条件下的轮级指令分配}\label{alg:allocation}
+\begin{algorithmic}[1]
+\Require $\bm\xi^d$，上一周期$\delta_{i,k-1},\dot\phi_{i,k-1}$，执行器约束
+\For{$i=1$ to $4$}
+  \State 由式\eqref{eq:ik}计算基础解$(\delta_i^0,\dot\phi_i^0)$
+  \If{$\|\bm v_i^d\|<\varepsilon_v$}
+    \State 保持$\delta_{i,k-1}$，令$\dot\phi_i^d=0$
+  \Else
+    \State 构造正向候选和转角相差$\pi$、轮速反向的候选
+    \State 删除违反转角硬限位的候选
+    \State 按式\eqref{eq:candidate}选择最小代价候选
+  \EndIf
+\EndFor
+\State 对轮速、转角速率和加速度做统一比例缩放
+\State 输出四轮同步目标与有效标志
+\end{algorithmic}
+\end{algorithm}
+
+\section{速度、加速度与转向速率约束}
+各轮目标除幅值限制外，还需满足
+\begin{equation}|\dot\delta_i|\leq\dot\delta_{i,\max},\quad |\ddot\phi_i|\leq\ddot\phi_{i,\max}.\end{equation}
+若直接对各轮独立限幅，会改变轮间速度比例并引入滑移。本文采用统一缩放系数
+\begin{equation}
+\lambda=\min\left(1,\min_i\frac{\dot\phi_{i,\max}}{|\dot\phi_i^d|+\epsilon}\right),
+\qquad \bm\xi^{d\prime}=\lambda\bm\xi^d,
+\end{equation}
+再重新计算轮级目标。转向机构尚未到达目标角时，驱动轮速应按转角误差门控，例如
+\begin{equation}
+g_i=\max\{0,\cos(\delta_i^d-\delta_i)\},\qquad \dot\phi_i^{cmd}=g_i\dot\phi_i^d,
+\end{equation}
+以降低“轮向未对齐而先驱动”造成的侧滑。该函数形式和阈值需通过实机试验确定。
+
+\section{典型运动模式与模型校验}
+纵向运动对应$(v_x,0,0)$，横移对应$(0,v_y,0)$，原地旋转对应$(0,0,\omega_z)$，复合运动对应三个分量同时非零。运动模式不是四套互斥的运动学模型，而是统一模型的不同输入。模型校验应比较理论轮级目标、编码器反馈和外部测得的车体运动，并报告式\eqref{eq:wls}的拟合残差。
+
+\chapter{分层运动控制与CAN通信设计}
+\section{Jetson Orin与STM32职责边界}
+Jetson Orin负责非硬实时任务：接收Nav2路径及速度请求、执行轨迹跟踪或模型预测控制、管理ROS~2坐标变换、记录数据。STM32负责确定周期内的运动学分配、转角/轮速目标同步下发、执行器反馈采集、看门狗、限位和故障状态机。电机驱动器执行最内层位置环或速度环。该三级结构将计算复杂度与实时安全性分离。
+
+\section{轮级串级控制}
+若CAN驱动器已经提供稳定的转向位置环和驱动速度环，STM32不应重复实现同频内环，而应承担外层协调与前馈。对需要STM32闭环的执行器，可采用离散PID：
+\begin{align}
+e_{\delta,i}[k]&=\operatorname{wrap}(\delta_i^d[k]-\delta_i[k]),\\
+u_{\delta,i}[k]&=K_{p\delta}e_{\delta,i}[k]+K_{i\delta}\sum_{j=0}^{k}e_{\delta,i}[j]T_c
++K_{d\delta}\frac{e_{\delta,i}[k]-e_{\delta,i}[k-1]}{T_c},\\
+e_{v,i}[k]&=r_i\dot\phi_i^d[k]-r_i\dot\phi_i[k].
+\end{align}
+积分项应配置饱和回算或条件积分，微分项应对测量值滤波。控制器增益不能凭论文给定，应通过单执行器阶跃、负载变化和整机运动试验辨识。
+
+\section{多轮同步与状态机}
+底盘控制器设置\texttt{INIT}、\texttt{READY}、\texttt{ALIGN}、\texttt{RUN}、\texttt{STOPPING}和\texttt{FAULT}状态。上电后完成节点在线检查和编码器零位确认；收到非零命令后先进入\texttt{ALIGN}，当四轮转角误差均小于阈值或达到超时上限后进入\texttt{RUN}；命令超时进入\texttt{STOPPING}，按可控减速度降至零；严重故障进入\texttt{FAULT}并禁止驱动。恢复条件必须明确区分自动恢复与人工复位。
+
+\begin{figure}[H]\centering
+\begin{tikzpicture}[node distance=12mm and 17mm,state/.style={draw,rounded corners,minimum width=23mm,minimum height=9mm,align=center,font=\small},arr/.style={-Latex,thick,font=\scriptsize}]
+\node[state] (init) {INIT}; \node[state,right=of init] (ready) {READY};
+\node[state,right=of ready] (align) {ALIGN}; \node[state,right=of align] (run) {RUN};
+\node[state,below=of run] (stop) {STOPPING}; \node[state,below=of ready] (fault) {FAULT};
+\draw[arr] (init)--node[above]{自检通过}(ready); \draw[arr] (ready)--node[above]{有效非零命令}(align);
+\draw[arr] (align)--node[above]{转向对齐}(run); \draw[arr] (run)--node[right]{零命令/超时}(stop);
+\draw[arr] (stop)--node[below]{速度为零}(ready); \draw[arr] (init)--(fault); \draw[arr] (ready)--(fault);
+\draw[arr] (align)--(fault); \draw[arr] (run)--(fault); \draw[arr] (fault)--node[left]{人工复位+条件满足}(init);
+\end{tikzpicture}
+\caption{STM32底盘控制状态机}\label{fig:fsm}
+\end{figure}
+
+\section{CAN应用层协议}
+CAN报文格式必须与实际控制器程序和电机手册一致。表\ref{tab:can}给出建议的逻辑字典，用于论文和软件接口设计，不表示已经烧录的最终协议。
+
+\begin{longtable}{p{2.0cm}p{2.1cm}p{2.6cm}p{5.2cm}p{2.0cm}}
+\caption{建议的CAN应用层消息字典}\label{tab:can}\\
+\toprule 消息 & 方向 & 触发方式 & 载荷字段 & 超时处理\\ \midrule \endfirsthead
+\toprule 消息 & 方向 & 触发方式 & 载荷字段 & 超时处理\\ \midrule \endhead
+车体命令 & Jetson$\to$STM32 & 周期 & 序号、模式、$v_x^d,v_y^d,\omega_z^d$、使能、校验 & 减速停车\\
+心跳/时间同步 & 双向 & 周期 & 节点状态、计数器、时间戳 & 标记离线\\
+轮级目标 & STM32$\to$驱动器 & 周期 & 节点号、控制模式、目标值、使能 & 驱动器停机\\
+轮级反馈 & 驱动器$\to$STM32 & 周期/应答 & 位置、速度、电流、温度、状态字 & 降级或故障\\
+底盘状态 & STM32$\to$Jetson & 周期 & 四轮反馈、底盘状态、故障位、供电信息 & 上位机诊断\\
+参数配置 & Jetson$\to$STM32 & 非周期 & 参数号、数值、版本、校验 & 不改变运行态\\
+急停 & 任意$\to$STM32 & 事件 & 来源、原因、锁存位 & 立即执行策略\\ \bottomrule
+\end{longtable}
+
+定点编码的比例因子、字节序、有符号格式和报文ID应在附录中逐项定义。每类报文至少包含递增序号或滚动计数器，以区分重复帧和长时间未更新。经典CAN单帧仅有8字节载荷，若字段超过容量，应采用多帧、CAN~FD或压缩定点格式；具体选择取决于现有硬件。
+
+\section{总线负载与调度}
+对第$j$类周期报文，设单帧在线位数为$L_j$、周期为$T_j$，总线位速率为$R_{CAN}$，近似总线利用率为
+\begin{equation}\rho=\sum_j\frac{L_j}{R_{CAN}T_j}.\end{equation}
+$L_j$应包含仲裁、控制、CRC、应答、帧间隔及位填充的影响。论文中应根据抓包统计给出最坏帧率和利用率，不宜只列名义波特率。高优先级ID分配给急停、故障和闭环关键反馈；低优先级分配给温度、诊断和参数配置。
+
+\section{故障检测与安全停车}
+故障源包括上位机命令超时、STM32看门狗复位、CAN bus-off、电机离线、编码器越界、转向超限、过流和急停输入。故障响应按严重度分级：可恢复告警仅降速；单轮反馈异常时禁止继续全向运动并进入受限停车；总线或急停故障触发驱动禁止。安全停车的“制动、自由滑行或速度斜坡”必须根据驱动器模式、负载和现场风险实测确定。
+
+\chapter{环境感知、定位与建图方法}
+\section{传感器数据链与标定}
+USB激光雷达发布\texttt{LaserScan}或\texttt{PointCloud2}；深度相机发布彩色图、深度图、相机内参和可选点云。传感器驱动使用各自硬件时间戳或接收时间戳，并统一转换到ROS~2时钟域。外参标定给出$\bm T_{base}^{laser}$和$\bm T_{base}^{camera}$，其结果应以静态TF发布。
+
+对深度像素$(u,v)$及深度$Z$，相机坐标系三维点为
+\begin{equation}X=\frac{(u-c_x)Z}{f_x},\qquad Y=\frac{(v-c_y)Z}{f_y},\qquad Z=Z.\end{equation}
+经外参变换后，将限定高度范围内的点投影到局部代价地图。深度无效值、近距离盲区和视场边缘噪声应在投影前剔除。
+
+\section{激光与深度观测预处理}
+激光数据处理包括距离范围裁剪、无效值剔除、自身结构遮挡过滤和可选的离群点滤波。深度数据处理包括深度尺度转换、空间降采样、地面或棚架结构过滤和点云裁剪。所有滤波参数需注明对障碍物漏检和计算量的影响，并通过回放数据集比较，而不是仅展示“处理后更平滑”的图片。
+
+\section{TF树与状态接口}
+系统采用\texttt{map}$\to$\texttt{odom}$\to$\texttt{base\_link}的标准变换链。轮式里程计节点发布\texttt{odom}$\to$\texttt{base\_link}；SLAM或定位节点发布\texttt{map}$\to$\texttt{odom}；雷达、相机和各传感器坐标系作为\texttt{base\_link}的静态子节点。任何两个节点不得同时发布同一TF，否则会造成变换跳变。
+
+\section{状态估计模型}
+若仅有轮式里程计与激光定位，则局部连续状态可取
+\begin{equation}\bm x=[x,y,\psi,v_x,v_y,\omega_z]\trans.\end{equation}
+离散预测模型由式\eqref{eq:pose}构成，观测来自轮式里程计和激光匹配位姿。扩展卡尔曼滤波写为
+\begin{align}
+\hat{\bm x}_{k|k-1}&=f(\hat{\bm x}_{k-1|k-1},\bm u_k),\\
+\bm P_{k|k-1}&=\bm F_k\bm P_{k-1|k-1}\bm F_k\trans+\bm Q_k,\\
+\bm K_k&=\bm P_{k|k-1}\bm H_k\trans(\bm H_k\bm P_{k|k-1}\bm H_k\trans+\bm R_k)^{-1},\\
+\hat{\bm x}_{k|k}&=\hat{\bm x}_{k|k-1}+\bm K_k(\bm z_k-h(\hat{\bm x}_{k|k-1})).
+\end{align}
+若硬件没有IMU，不应在模型或框图中虚构IMU观测。此时偏航短时预测主要依赖四轮里程计，过程噪声应在横移、旋转和地面打滑试验中分别标定。
+
+\section{二维SLAM与定位方案}
+建图阶段以激光扫描和轮式里程计为主要输入，输出二维占据栅格和轨迹；导航阶段加载静态地图并进行扫描匹配定位。算法可采用与ROS~2兼容的SLAM和定位组件，但正式论文应在实现后写明软件版本、关键参数、回环检测策略和地图分辨率。深度相机优先用于补充二维雷达难以观测的悬空或低矮障碍物，而非在未验证前宣称完成语义建图。
+
+\chapter{面向4WIS底盘的路径规划与轨迹跟踪}
+\section{导航问题形式化}
+给定地图$\mathcal M$、初始位姿$\bm q_0$和目标位姿$\bm q_g$，规划器生成无碰路径$\mathcal P=\{\bm q_j^r\}$；局部控制器在每个周期求取$\bm u_k=[v_x,v_y,\omega_z]\trans$，使机器人跟踪路径并满足
+\begin{equation}
+\bm q_{k+1}=f_d(\bm q_k,\bm u_k),\quad
+\bm u_{\min}\leq\bm u_k\leq\bm u_{\max},\quad
+\Delta\bm u_{\min}\leq\Delta\bm u_k\leq\Delta\bm u_{\max},
+\end{equation}
+同时保证机器人轮廓与障碍物集合不相交。由于底盘允许$v_y\neq0$，控制器和规划器配置必须显式启用全向速度维度。
+
+\section{代价地图与机器人轮廓}
+全局代价地图用于静态路径搜索，局部代价地图融合激光和深度障碍物。机器人应使用真实多边形轮廓而非仅用外接圆，以降低狭窄通道中的过度保守。膨胀代价可写为
+\begin{equation}C(d)=C_0\exp[-\alpha(d-r_{ins})],\qquad d\geq r_{ins},\end{equation}
+其中$d$为栅格到障碍物距离，$r_{ins}$为内切半径。$\alpha$过大会导致靠障碍物行驶，过小会压缩可通行区域，应通过通道试验整定。
+
+\section{全局路径生成与平滑}
+基线方案采用栅格A*或Nav2兼容规划器生成几何路径，再对离散折线进行平滑。平滑问题可写为
+\begin{equation}
+\min_{\{\bm p_j\}}\sum_j w_r\|\bm p_j-\bm p_j^0\|^2
++w_s\|\bm p_{j+1}-2\bm p_j+\bm p_{j-1}\|^2+w_o\Phi(\bm p_j,\mathcal M),
+\end{equation}
+其中第一项保持对原始路径的贴合，第二项惩罚曲率突变，第三项惩罚接近障碍物。若后续采用多运动模式Hybrid A*，应把纵移、横移、旋转和复合运动原语及其切换代价写入搜索，而不能仅将差速车辆模型更名为4WIS模型。
+
+\section{路径误差定义}
+对当前位姿$\bm q=[x,y,\psi]\trans$及路径上最近参考位姿$\bm q_r=[x_r,y_r,\psi_r]\trans$，在参考坐标系定义误差
+\begin{equation}
+\begin{bmatrix}e_x\\e_y\end{bmatrix}
+=\begin{bmatrix}\cos\psi_r&\sin\psi_r\\-\sin\psi_r&\cos\psi_r\end{bmatrix}
+\begin{bmatrix}x-x_r\\y-y_r\end{bmatrix},\qquad e_\psi=\operatorname{wrap}(\psi-\psi_r).
+\end{equation}
+4WIS底盘可分别利用$v_x$、$v_y$和$\omega_z$校正纵向、横向和航向误差，因此在低速精确停靠时无需强制车体朝向始终与路径切线一致。
+
+\section{约束模型预测跟踪控制}
+为同时处理全向运动和输入约束，本文将模型预测控制作为拟实现的局部跟踪方法。采用采样周期$T_p$离散化式\eqref{eq:pose}，在预测域$N$内求解
+\begin{align}
+\min_{\bm U}\quad J={}&\sum_{j=1}^{N}\|\bm q_{k+j|k}-\bm q_{k+j}^r\|_{\bm Q}^2
++\sum_{j=0}^{N-1}\|\bm u_{k+j|k}\|_{\bm R}^2\\
+&+\sum_{j=0}^{N-1}\|\Delta\bm u_{k+j|k}\|_{\bm S}^2
++w_o\sum_{j=1}^{N}\Phi(\bm q_{k+j|k},\mathcal M),
+\label{eq:mpc}
+\end{align}
+满足车体速度、加速度、轮速、转角和转向速率约束。严格的轮级约束可通过每个预测步调用逆运动学加入；若实时性不足，可先在车体速度空间使用保守包络，再由STM32执行二次约束检查。
+
+控制器只执行最优序列的第一项，然后滚动优化。求解失败时复用上一周期可行解并衰减速度；连续失败超过阈值则请求停车。式\eqref{eq:mpc}目前是待实现算法，不应在实验前写成“已提高跟踪精度”。
+
+\section{Nav2接口与兼容性}
+全局规划器输出\texttt{nav\_msgs/Path}，控制插件输出带时间戳的\texttt{geometry\_msgs/TwistStamped}。由于普通差速控制器可能忽略$y$向速度，必须核对插件的运动模型、速度限制参数和碰撞预测维度。若自研MPC作为Nav2控制插件，应实现配置、激活、停用和清理生命周期接口，并在计算超时时返回明确错误码。
+
+\section{恢复行为与任务管理}
+恢复行为包括原地等待、局部清图、低速横向脱困、重新规划和安全停车。横向脱困只有在传感器覆盖、轮级约束和周围净空均满足时才能启用。任务管理层记录目标状态、规划失败次数和故障来源，不越过STM32的硬安全状态机。
+
+\chapter{ROS 2软件架构与实现方案}
+\section{节点划分}
+\begin{table}[H]\centering
+\caption{建议的ROS~2节点及接口}
+\begin{tabular}{p{3.2cm}p{3.5cm}p{4.2cm}p{3.0cm}}
+\toprule 节点 & 主要订阅 & 主要发布 & 部署/频率\\ \midrule
+\texttt{chassis\_bridge} & \texttt{/cmd\_vel}, CAN状态 & \texttt{/wheel\_states},诊断 & Jetson/\placeholder{填写}\\
+\texttt{wheel\_odometry} & \texttt{/wheel\_states} & \texttt{/odom}, TF & Jetson/\placeholder{填写}\\
+\texttt{lidar\_driver} & USB设备 & \texttt{/scan} & Jetson/按设备\\
+\texttt{camera\_driver} & USB设备 & 图像、深度、点云 & Jetson/按设备\\
+\texttt{depth\_obstacle} & 深度、相机信息、TF & 障碍点云 & Jetson/\placeholder{填写}\\
+SLAM/定位节点 & scan、odom、TF & map、定位TF & Jetson/\placeholder{填写}\\
+Nav2节点组 & map、传感器、目标 & path、cmd\_vel & Jetson/\placeholder{填写}\\
+\texttt{system\_supervisor} & diagnostics、心跳 & 模式、停车请求 & Jetson/\placeholder{填写}\\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section{话题QoS与时间戳}
+控制命令强调新鲜度，采用小队列并丢弃旧消息；传感器流采用适合高频数据的QoS；地图和静态配置需要持久化语义。论文应列出实际QoS配置以及断连重连行为。所有测量消息保留采样时间而不是处理完成时间，CAN桥接节点记录发送、STM32接收和反馈返回时刻，用于分解端到端延迟。
+
+\section{参数、日志与可复现实验}
+几何参数、轮径、转角零偏、速度上限、控制增益、CAN~ID、TF外参和Nav2配置均保存为版本化配置文件。每次实验记录软件提交号、参数文件哈希、地图版本和数据包编号。ROS~2 bag至少记录\texttt{/cmd\_vel}、轮级目标/反馈、\texttt{/odom}、定位位姿、TF、传感器数据、规划路径和诊断信息。
+
+\section{实时性与资源监测}
+Jetson端记录各节点回调耗时、控制器求解时间、CPU/GPU占用和消息年龄；STM32端使用硬件定时器统计控制周期抖动和最坏执行时间。平均耗时不足以证明实时性，应同时报告最大值、99百分位数和超时次数。
+
+\chapter{实验设计与评价方法}
+\section{实验原则与分级验证}
+实验按“单执行器—底盘开环—底盘闭环—定位建图—路径跟踪—完整导航”逐级进行。仅当前一级满足安全和误差要求后进入下一级。所有算法至少重复若干次，报告均值、标准差和置信区间；重复次数、地面条件、载荷、电量与速度等级应在实验记录中固定或说明。
+
+\section{几何参数与执行器标定}
+测量轮距、轴距、有效轮径、转角零位和机械限位。有效轮径通过多次定距离滚动估计；转角零偏通过轮向基准和编码器读数拟合。标定前后分别执行直线和原地旋转，比较累计位置与航向误差。
+
+\section{通信与底层控制实验}
+通信实验测量CAN利用率、端到端延迟、周期抖动、丢帧和bus-off恢复。执行器实验对不同幅值的转角和轮速阶跃进行测试，指标包括上升时间、调节时间、超调量和稳态误差。多轮同步实验定义
+\begin{equation}E_{sync}(t)=\max_i e_i(t)-\min_i e_i(t),\end{equation}
+其中$e_i$可取归一化转角或轮速跟踪误差。
+
+\section{运动学与里程计实验}
+分别执行纵向、横向、斜移、原地旋转、圆周和S形轨迹。利用外部测量系统或可追溯人工基准获取参考轨迹。绝对轨迹误差为
+\begin{equation}
+\mathrm{ATE}_{RMSE}=\sqrt{\frac{1}{N}\sum_{k=1}^{N}\|\bm p_k-\bm p_k^{gt}\|_2^2},
+\end{equation}
+同时报告终点位置误差、航向误差、轮级相容残差和重复性。通过人为降低单轮权重或注入异常反馈，验证加权最小二乘里程计的容错趋势。
+
+\section{定位建图实验}
+建图评价包括地图完整性、结构一致性、闭环前后轨迹变化和重复建图一致性。定位评价采用多条闭环与往返路线，报告ATE、相对位姿误差、定位丢失次数和重定位时间。激光单独与激光加深度障碍层的对比只用于评估障碍感知和导航效果，不能在没有位姿观测增益时声称深度相机提高了定位精度。
+
+\section{路径跟踪对比实验}
+设置直线、横移、圆弧、S形和包含姿态约束的停靠轨迹。建议设置以下对照组：（1）基线几何控制器；（2）约束MPC；（3）关闭转角等价解优化；（4）开启转角等价解优化。横向误差RMSE、航向误差RMSE和控制平滑性定义为
+\begin{align}
+E_y&=\sqrt{\frac{1}{N}\sum_{k=1}^{N}e_y(k)^2},\\
+E_\psi&=\sqrt{\frac{1}{N}\sum_{k=1}^{N}e_\psi(k)^2},\\
+J_{\Delta u}&=\sum_{k=1}^{N-1}\|\bm u_{k+1}-\bm u_k\|_2^2.
+\end{align}
+另统计转角限位触发次数、轮速换向次数、控制器求解时间和不可行次数。
+
+\section{完整导航与消融实验}
+在不同通道宽度、转弯空间、目标位姿和障碍物布局下进行重复导航。指标包括成功率、路径长度、任务时间、最小障碍距离、重规划次数、急停次数和最终停靠误差。消融实验分别关闭深度障碍层、横移自由度、约束分配或局部MPC，以说明各模块的独立贡献。成功和失败判据必须在试验前定义。
+
+\begin{table}[H]\centering
+\caption{实验结果表模板（不得以占位符替代实测值投稿）}
+\begin{tabular}{lcccccc}
+\toprule 方法 & 成功率 & $E_y$ & $E_\psi$ & 最小间距 & 任务时间 & 计算时间\\ \midrule
+基线方法 & -- & -- & -- & -- & -- & --\\ 本文方法 & -- & -- & -- & -- & -- & --\\
+消融组A & -- & -- & -- & -- & -- & --\\ 消融组B & -- & -- & -- & -- & -- & --\\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section{本章小结}
+本章只定义实验对象、变量、对照组和评价指标。所有“优于”“提高”“降低”等结论均须在数据采集、统计分析和重复试验完成后撰写。
+
+\chapter{结论与后续实施顺序}
+本文围绕已确定的Jetson Orin--STM32--CAN执行器以及USB激光雷达、USB深度相机硬件拓扑，建立了从车体运动到轮级执行的正逆运动学模型，提出有限转角下的等价解选择和统一约束缩放方法，设计了上位规划、底层实时控制、CAN通信、安全状态机、状态估计、Nav2接口和约束轨迹跟踪方案，并给出了分级实验体系。
+
+当前文稿属于技术设计稿，不代表全部算法已经实现。建议实施顺序为：（1）冻结几何、电机和CAN参数；（2）完成STM32状态机与单轮闭环；（3）验证四轮逆解、正解和里程计；（4）建立TF与传感器数据链；（5）完成建图定位；（6）接入Nav2基线控制器；（7）实现并对比约束MPC；（8）开展完整导航及消融实验。最终学位论文应依据源代码、标定记录和实测数据重写摘要、创新点、实验结果和结论。
+
+\appendix
+\chapter{需要由实机补齐的参数清单}
+\begin{longtable}{p{4.3cm}p{4.0cm}p{5.2cm}}
+\toprule 参数 & 符号/配置项 & 获取方式\\ \midrule
+轴距、轮距、各轮实际坐标 & $2l,2d,(x_i,y_i)$ & 尺寸测量\\
+有效轮径与左右差异 & $r_i$ & 定距离滚动标定\\
+转角零偏与限位 & $\delta_{i,0},\delta_{i,\min/\max}$ & 工装/编码器标定\\
+最大轮速、加速度 & $\dot\phi_{i,\max},\ddot\phi_{i,\max}$ & 驱动器手册与负载试验\\
+最大转向速率 & $\dot\delta_{i,\max}$ & 阶跃试验\\
+CAN位速率和ID & \texttt{bitrate}, \texttt{can\_id} & 接线、程序与抓包\\
+命令超时与停车斜率 & $T_{timeout}$ & 故障注入与安全试验\\
+传感器外参 & $\bm T_{base}^{sensor}$ & 外参标定\\
+定位与里程计协方差 & $\bm Q,\bm R$ & 重复轨迹统计\\
+MPC权重与预测域 & $\bm Q,\bm R,\bm S,N$ & 仿真与实机整定\\ \bottomrule
+\end{longtable}
+
+\chapter{CAN信号定义表模板}
+\begin{longtable}{p{1.5cm}p{2.0cm}p{2.1cm}p{1.5cm}p{1.7cm}p{2.0cm}p{2.4cm}}
+\toprule CAN ID & 消息名 & 信号名 & 起始位 & 长度 & 比例/偏置 & 范围/说明\\ \midrule
+-- & -- & -- & -- & -- & -- & \placeholder{按实际协议填写}\\
+-- & -- & -- & -- & -- & -- & --\\ -- & -- & -- & -- & -- & -- & --\\ \bottomrule
+\end{longtable}
+
+\begin{thebibliography}{99}
+\bibitem{lee2015} Lee M H, Li T H S. Kinematics, dynamics and control design of 4WIS4WID mobile robots[J]. The Journal of Engineering, 2015, 2015(1): 6--16. DOI: 10.1049/joe.2014.0241.
+\bibitem{petrovic2024} \v{C}aran B, Mili\'{c} V, \v{S}vaco M, Jerbi\'{c} B. Optimal control-based algorithm design and application for trajectory tracking of a mobile robot with four independently steered and four independently actuated wheels[J]. Actuators, 2024, 13(8): 279. DOI: 10.3390/act13080279.
+\bibitem{lee2026} Lee H, Joe H M. Reinforcement learning-based control of a 4-wheel independent steering mobile robot for robust path tracking in outdoor environments[J]. Sensors, 2026, 26(6): 1761. DOI: 10.3390/s26061761.
+\bibitem{bae2023} Bae B, Lee D H. Design of a four-wheel steering mobile robot platform and adaptive steering control for manual operation[J]. Electronics, 2023, 12(16): 3511. DOI: 10.3390/electronics12163511.
+\bibitem{fault2013} Aref M M, Ghabcheloo R, Mattila J. Mechatronic design of a four wheel steering mobile robot with fault-tolerant odometry feedback[J]. IFAC Proceedings Volumes, 2013, 46(5): 663--669. DOI: 10.3182/20130410-3-CN-2034.00092.
+\bibitem{siciliano2016} Siciliano B, Khatib O, eds. Springer Handbook of Robotics[M]. 2nd ed. Cham: Springer, 2016.
+\bibitem{thrun2005} Thrun S, Burgard W, Fox D. Probabilistic Robotics[M]. Cambridge, MA: MIT Press, 2005.
+\end{thebibliography}
+
+\end{document}

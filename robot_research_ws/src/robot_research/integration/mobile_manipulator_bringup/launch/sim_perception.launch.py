@@ -56,6 +56,19 @@ def _isaac_process(context):
         raise RuntimeError("benchmarks require add_green_target and target_perception")
 
     command = [str(python_executable), str(script), "--enable-nav-rgbd"]
+    if _enabled(context, "empty_scene"):
+        command.append("--empty-scene")
+    if _enabled(context, "enable_base_control"):
+        command.append("--ros")
+    if _enabled(context, "add_rack"):
+        command.append("--add-rack")
+        command.extend(("--rack-layout", LaunchConfiguration("rack_layout").perform(context)))
+        command.extend(("--rack-visual-seed", LaunchConfiguration("rack_visual_seed").perform(context)))
+        rack_asset = LaunchConfiguration("rack_asset").perform(context).strip()
+        if rack_asset:
+            command.extend(("--rack-asset", rack_asset))
+        if _enabled(context, "parametric_rack"):
+            command.append("--parametric-rack")
     if _enabled(context, "add_green_target"):
         command.extend(
             (
@@ -210,7 +223,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {
-                "robot_description": robot_description,
+                "robot_description": ParameterValue(robot_description, value_type=str),
                 "use_sim_time": True,
             }
         ],
@@ -259,10 +272,17 @@ def generate_launch_description():
         [
             DeclareLaunchArgument("start_isaac", default_value="true"),
             DeclareLaunchArgument("headless", default_value="false"),
+            DeclareLaunchArgument("empty_scene", default_value="false"),
             DeclareLaunchArgument("test_seconds", default_value="0"),
             DeclareLaunchArgument("add_green_target", default_value="true"),
+            DeclareLaunchArgument("add_rack", default_value="false"),
+            DeclareLaunchArgument("rack_asset", default_value=""),
+            DeclareLaunchArgument("rack_layout", default_value="grid4x4"),
+            DeclareLaunchArgument("rack_visual_seed", default_value="0"),
+            DeclareLaunchArgument("parametric_rack", default_value="false"),
             DeclareLaunchArgument("green_target_depth", default_value="0.77"),
             DeclareLaunchArgument("start_target_perception", default_value="true"),
+            DeclareLaunchArgument("enable_base_control", default_value="false"),
             DeclareLaunchArgument("output_frame", default_value="base_link"),
             DeclareLaunchArgument("publish_world_tf", default_value="false"),
             DeclareLaunchArgument("run_benchmark", default_value="false"),
@@ -281,7 +301,7 @@ def generate_launch_description():
                 "benchmark_output_dir",
                 default_value="/tmp/target_perception_distance_benchmark",
             ),
-            DeclareLaunchArgument("nav_camera_mount_xyz", default_value="0.10 0 1.12"),
+            DeclareLaunchArgument("nav_camera_mount_xyz", default_value="0.10 0 1.70"),
             DeclareLaunchArgument("nav_camera_mount_rpy", default_value="0 0.20944 0"),
             DeclareLaunchArgument(
                 "isaac_python",

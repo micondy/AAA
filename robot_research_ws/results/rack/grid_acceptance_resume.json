@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "interrupted": false,
+  "elapsed_wall_s": 22.680653311000015,
+  "waypoints_reached": 25,
+  "waypoints_total": 25,
+  "resumed_from_waypoint": 23,
+  "model_frames": 199,
+  "final_racks": 16,
+  "final_layers": 48,
+  "maximum_racks": 16,
+  "maximum_layers": 48,
+  "complete_stable_id_sets": 1,
+  "maximum_height_error_m": 0.012592987524589927,
+  "final_position": [
+    8.703461646538926,
+    -6.415515423286706
+  ]
+}

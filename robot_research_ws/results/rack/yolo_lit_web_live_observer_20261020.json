@@ -1,0 +1,15 @@
+{
+  "schema": "rack_yolo_online_check/v1",
+  "elapsed_wall_s": 20.054064418999985,
+  "mask_frames": 89,
+  "mask_hz": 4.438003097051888,
+  "metadata_frames": 108,
+  "bed_instances": 2632,
+  "post_instances": 2019,
+  "geometry_frames": 88,
+  "geometry_layers": 1002,
+  "map_frames": 85,
+  "maximum_racks": 4,
+  "maximum_layers": 12,
+  "passed": true
+}

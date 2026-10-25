@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "duration_s": 23.004877005000026,
+  "map_frames": 223,
+  "stable_three_layer_frames": 223,
+  "invalid_frames_after_lock": 0,
+  "stable_id_sets": [
+    [
+      "rack_0001",
+      "layer_0001",
+      "layer_0002",
+      "layer_0003"
+    ]
+  ],
+  "alignment_samples": 318,
+  "distance_error_span_m": 0.059507909170136375
+}

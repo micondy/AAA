@@ -9,7 +9,7 @@
 - 安装座底面位于底盘上表面：默认 `openarm_mount_xyz:=0,0,0.18`
 - OpenArm 朝向与底盘 `+X` 前方对齐：默认 `openarm_mount_rpy:=0,0,0`
 - 双臂和双手均启用；OpenArm 的 ROS 2 Control 默认关闭
-- 顶部导航相机：`nav_camera`（D435），临时安装位姿为 `xyz=0.10,0,1.12`、
+- 顶部导航相机：`nav_camera`（D435），临时安装位姿为 `xyz=0.10,0,1.70`、
   `rpy=0,0.20944,0`（向下俯视 12°）
 - 真机默认只由 URDF 发布 `base_link` 到相机安装根部的 TF；相机内部标定 TF 由 `realsense2_camera` 发布
 

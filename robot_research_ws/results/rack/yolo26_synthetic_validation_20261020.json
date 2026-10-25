@@ -1,0 +1,38 @@
+{
+  "schema": "rack_yolo26_validation/v1",
+  "weights": "/media/scc/Windows_D/AAA/robot_research_ws/runs/segment/runs/rack_yolo26_synthetic_20261020/bed_post/weights/best.pt",
+  "dataset": "/media/scc/Windows_D/AAA/robot_research_ws/datasets/rack_yolo_synthetic_20261020/data.yaml",
+  "split": "val",
+  "image_size": 640,
+  "metrics": {
+    "metrics/precision(B)": 0.6405809675826022,
+    "metrics/recall(B)": 0.5549336092009771,
+    "metrics/mAP50(B)": 0.5623910380795948,
+    "metrics/mAP50-95(B)": 0.3049622799709254,
+    "metrics/precision(M)": 0.5412064663333829,
+    "metrics/recall(M)": 0.4450739232246942,
+    "metrics/mAP50(M)": 0.4550640899710382,
+    "metrics/mAP50-95(M)": 0.25293292797952904,
+    "fitness": 0.5578952079504544
+  },
+  "classes": {
+    "bed": {
+      "precision": 0.6439806511645949,
+      "recall": 0.6079012345679012,
+      "mask_map50": 0.6516791775770365,
+      "mask_map50_95": 0.41512710380265555
+    },
+    "post": {
+      "precision": 0.4384322815021709,
+      "recall": 0.2822466118814871,
+      "mask_map50": 0.25844900236503987,
+      "mask_map50_95": 0.09073875215640248
+    }
+  },
+  "speed_ms": {
+    "preprocess": 0.3716544370856643,
+    "inference": 2.617012596028149,
+    "loss": 0.0008109403960293545,
+    "postprocess": 1.2264614503318993
+  }
+}

@@ -1,0 +1,54 @@
+rack_detector:
+  ros__parameters:
+    use_sim_time: true
+    semantic_image_topic: /sensors/nav_camera/semantic_segmentation
+    semantic_labels_topic: /sensors/nav_camera/semantic_labels
+    mask_topic: /rack_detector/instance_mask
+    debug_mask_topic: /rack_detector/debug/color_mask
+    layer_label_pattern: "rack_layer_(\\d+)"
+    post_label: rack_post
+
+rack_geometry:
+  ros__parameters:
+    use_sim_time: true
+    output_frame: sim_world
+    mask_topic: /rack_detector/instance_mask
+    depth_topic: /sensors/nav_camera/aligned_depth_to_color/image_raw
+    camera_info_topic: /sensors/nav_camera/color/camera_info
+    min_depth_m: 0.2
+    max_depth_m: 5.0
+    min_points: 300
+    min_confidence: 0.35
+    top_band_m: 0.04
+    # The parametric single/grid4x4 racks are parallel to the world Y axis.
+    # This structural prior prevents partial RGB-D surfaces from tilting the map.
+    # Disable for unknown or differently oriented real-world racks.
+    use_axis_prior: true
+    axis_prior_yaw_rad: 1.5707963267948966
+    filter_expected_heights: true
+    expected_layer_heights_m: [0.55, 1.05, 1.55]
+
+rack_map:
+  ros__parameters:
+    use_sim_time: true
+    rack_distance_m: 0.85
+    layer_xy_distance_m: 0.65
+    layer_height_distance_m: 0.18
+    smoothing: 0.25
+    min_confirmed_layers: 3
+
+harvest_planner:
+  ros__parameters:
+    use_sim_time: true
+    target_rack_id: ""
+    target_level: 1
+    standoff_m: 0.65
+
+rack_alignment:
+  ros__parameters:
+    use_sim_time: true
+    base_frame: base_link
+    target_rack_id: ""
+    target_level: 1
+    desired_distance_m: 0.65
+    update_rate_hz: 15.0

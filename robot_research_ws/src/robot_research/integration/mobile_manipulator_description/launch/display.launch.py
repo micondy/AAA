@@ -36,7 +36,7 @@ def generate_launch_description():
         DeclareLaunchArgument("openarm_mount_xyz", default_value="0 0 0.18"),
         DeclareLaunchArgument("openarm_mount_rpy", default_value="0 0 0"),
         DeclareLaunchArgument("nav_camera_enabled", default_value="true"),
-        DeclareLaunchArgument("nav_camera_mount_xyz", default_value="0.10 0 1.12"),
+        DeclareLaunchArgument("nav_camera_mount_xyz", default_value="0.10 0 1.70"),
         DeclareLaunchArgument("nav_camera_mount_rpy", default_value="0 0.20944 0"),
         DeclareLaunchArgument("nav_camera_use_nominal_extrinsics", default_value="false"),
         Node(

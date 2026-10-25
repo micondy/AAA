@@ -1,0 +1,45 @@
+# Four-by-four rack simulation only. Preserve the hardware Nav2 defaults.
+# Commands from both the web and Nav2 pass through Collision Monitor.
+controller_server:
+  ros__parameters:
+    odom_topic: /swerve_controller/odom
+    FollowPath:
+      desired_linear_vel: 0.25
+      rotate_to_heading_angular_vel: 0.40
+
+velocity_smoother:
+  ros__parameters:
+    odom_topic: /swerve_controller/odom
+    max_velocity: [0.30, 0.0, 0.45]
+    min_velocity: [-0.10, 0.0, -0.45]
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      footprint: "[[0.33, 0.31], [0.33, -0.31], [-0.33, -0.31], [-0.33, 0.31]]"
+      footprint_padding: 0.02
+      voxel_layer:
+        front_depth:
+          min_obstacle_height: 0.10
+      inflation_layer:
+        inflation_radius: 0.36
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      footprint: "[[0.33, 0.31], [0.33, -0.31], [-0.33, -0.31], [-0.33, 0.31]]"
+      footprint_padding: 0.02
+      obstacle_layer:
+        front_depth:
+          min_obstacle_height: 0.10
+      inflation_layer:
+        inflation_radius: 0.36
+
+collision_monitor:
+  ros__parameters:
+    FrontStop:
+      points: "[[0.85, 0.32], [0.85, -0.32], [0.38, -0.32], [0.38, 0.32]]"
+      enabled: true
+    front_depth:
+      min_height: 0.10
+      enabled: true

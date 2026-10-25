@@ -6,7 +6,7 @@
   <title>Mobile Base 控制台</title>
   <link rel="stylesheet" href="/app.css">
   <link rel="stylesheet" href="/maintenance.css?v=2">
-  <link rel="stylesheet" href="/visualization.css?v=6">
+  <link rel="stylesheet" href="/visualization.css?v=11">
 </head>
 <body>
   <header>
@@ -52,11 +52,12 @@
       <section class="visual-grid">
         <article class="panel map-panel">
           <div class="section-title">
-            <div><p class="eyebrow">LOCAL MAP</p><h2>SLAM 与轨迹地图 <span id="mapSourceBadge" class="badge map-source">等待 /map</span></h2></div>
-            <div class="map-tools"><button id="mapZoomOut" class="ghost small" aria-label="缩小地图">−</button><span id="mapScale">5 m</span><button id="mapZoomIn" class="ghost small" aria-label="放大地图">＋</button><button id="mapCenter" class="ghost small">跟随车辆</button><button id="mapClear" class="ghost small">清除轨迹</button></div>
+            <div><p class="eyebrow">LOCAL MAP</p><h2>SLAM 与轨迹地图 <span id="mapSourceBadge" class="badge map-source">等待 /map</span> <span id="rackSourceBadge" class="badge map-source">等待 /rack_map/model</span></h2></div>
+            <div class="map-tools"><button id="mapZoomOut" class="ghost small" aria-label="缩小地图">−</button><span id="mapScale">视野 500 cm</span><button id="mapZoomIn" class="ghost small" aria-label="放大地图">＋</button><button id="mapCenter" class="ghost small">跟随车辆</button><button id="mapClear" class="ghost small">清除轨迹</button></div>
           </div>
-          <div class="map-wrap"><canvas id="mapCanvas" aria-label="车辆局部轨迹地图"></canvas><div class="map-hint">按下选择位置，拖动设置目标朝向；矩形为真实车体</div><div class="map-legend"><span><i class="legend-free"></i>可通行</span><span><i class="legend-unknown"></i>未知</span><span><i class="legend-obstacle"></i>障碍</span><span><i class="legend-path"></i>轨迹</span><span id="bodyLegend"><i class="legend-car"></i>车体尺寸</span><span><i class="legend-footprint"></i>导航轮廓</span></div></div>
+          <div class="map-wrap"><canvas id="mapCanvas" aria-label="车辆局部轨迹地图"></canvas><div id="mapReference" class="map-reference">等待地图坐标</div><div id="mapProbe" class="map-probe">移动鼠标查看坐标与栅格占用</div><div class="map-hint">按下选择位置，拖动设置目标朝向；矩形为真实车体</div><div class="map-legend"><span><i class="legend-free"></i>可通行</span><span><i class="legend-unknown"></i>未知</span><span><i class="legend-obstacle"></i>障碍</span><span><i class="legend-path"></i>轨迹</span><span id="bodyLegend"><i class="legend-car"></i>车体尺寸</span><span><i class="legend-footprint"></i>导航轮廓</span></div></div>
           <div id="mapPose" class="pose"><span>x —</span><span>y —</span><span>航向 —</span></div>
+          <div id="rackList" class="rack-list" aria-label="层架和各层稳定编号"><span class="rack-empty">尚未观察到层架</span></div>
           <div class="navigation-controls">
             <div><strong id="navState">点击地图选择导航目标</strong><small id="navDetail">目标使用 map 坐标系</small></div>
             <label class="nav-heading">目标朝向 <span><input id="navYaw" type="number" min="-180" max="180" step="1" value="0" disabled>°</span></label>
@@ -65,10 +66,12 @@
           </div>
         </article>
         <article class="panel vehicle-panel">
-          <div class="section-title"><div><p class="eyebrow">SPATIAL VIEW</p><h2>3D 环境与底盘</h2></div><div class="view-switch"><button id="showScene3d" class="ghost small active">Nvblox 环境</button><button id="showVehicle3d" class="ghost small">真实底盘俯视</button><button id="resetView" class="ghost small">重置视角</button></div></div>
+          <div class="section-title"><div><p class="eyebrow">SPATIAL VIEW</p><h2>三维层架与底盘</h2></div><div class="view-switch"><button id="showScene3d" class="ghost small active">层架模型</button><button id="showNvblox3d" class="ghost small">Nvblox 点图</button><button id="showVehicle3d" class="ghost small">底盘俯视</button><button id="sceneTopDown" class="ghost small">正北俯视</button><button id="sceneFollowRobot" class="ghost small">跟随底盘</button><button id="resetView" class="ghost small">全图复位</button></div></div>
           <div id="scene3dStage" class="scene3d-stage">
-            <canvas id="scene3dCanvas" aria-label="Nvblox 三维环境地图"></canvas>
-            <div id="scene3dStatus" class="scene3d-status">等待 /nvblox_node/mesh</div>
+            <canvas id="scene3dCanvas" aria-label="语义层架三维模型"></canvas>
+            <div id="scene3dStatus" class="scene3d-status">等待 /rack_map/model</div>
+            <div id="sceneReference" class="scene-reference">等待坐标系</div>
+            <div id="semanticLegend" class="semantic-legend">绿色：当前观测　蓝灰：遮挡保留　虚线立柱：结构推测</div>
             <div class="orientation"><b>3D</b><span>拖动旋转 · 滚轮缩放</span></div>
           </div>
           <div id="vehicleStage" class="vehicle-stage" aria-label="按实车尺寸绘制的底盘俯视模型">
@@ -77,6 +80,13 @@
           </div>
           <div id="modelWheelData" class="model-wheel-data hidden"></div>
         </article>
+      </section>
+      <section class="panel camera-panel" aria-label="实时相机与分割画面">
+        <div class="section-title"><div><p class="eyebrow">LIVE PERCEPTION</p><h2>相机与层架实例分割</h2></div><span id="cameraStatus" class="badge map-source">等待相机</span></div>
+        <div class="camera-grid">
+          <figure><img id="cameraRgb" alt="机器人 RGB 相机实时画面"><figcaption>RGB · Isaac/D435 等效相机</figcaption></figure>
+          <figure><img id="cameraMask" alt="YOLO 层架实例分割实时画面"><figcaption>实例掩膜 · 床面彩色 / 立柱浅色</figcaption></figure>
+        </div>
       </section>
     </div>
 
@@ -193,6 +203,7 @@
     </div>
   </main>
   <footer>Mobile Base Web Console · 调试用途</footer>
-  <script src="/app.js?v=15"></script>
+  <script src="/rack_scene.js?v=2"></script>
+  <script src="/app.js?v=22"></script>
 </body>
 </html>

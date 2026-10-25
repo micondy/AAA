@@ -1,0 +1,28 @@
+{
+  "passed": false,
+  "anonymous_instances": true,
+  "interrupted": false,
+  "elapsed_wall_s": 155.0393028200001,
+  "waypoints_reached": 6,
+  "waypoints_total": 25,
+  "resumed_from_waypoint": 0,
+  "model_frames": 1409,
+  "final_racks": 7,
+  "final_layers": 21,
+  "maximum_racks": 7,
+  "maximum_layers": 21,
+  "complete_stable_id_sets": 0,
+  "maximum_height_error_m": 0.007587065721631037,
+  "maximum_position_error_m": 0.3081172352822428,
+  "truth_racks_ever_associated": 7,
+  "truth_layers_ever_associated": 21,
+  "rack_id_fragments": {},
+  "rack_id_switches": {},
+  "layer_id_fragments": {},
+  "minimum_clearance_m": 0.2546089847381767,
+  "overlap_risk_samples": 0,
+  "final_position": [
+    0.9016171688854229,
+    5.0148520465008914
+  ]
+}
