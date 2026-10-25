@@ -71,6 +71,14 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "use_rviz", default_value="true", description="Start RViz2"
             ),
+            DeclareLaunchArgument(
+                "start_web_console", default_value="false", description="Start web console"
+            ),
+            Node(
+                package="mobile_base_web_console", executable="web_console",
+                output="screen",
+                condition=IfCondition(LaunchConfiguration("start_web_console")),
+            ),
             control_node,
             robot_state_publisher,
             joint_state_spawner,

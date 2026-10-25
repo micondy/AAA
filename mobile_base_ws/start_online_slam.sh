@@ -7,7 +7,20 @@ research_workspace="${ROBOT_RESEARCH_WS:-$(cd -- "${base_workspace}/../robot_res
 database_path="${SLAM_DATABASE_PATH:-${HOME}/.ros/mobile_base_online.db}"
 camera_serial="${D435I_SERIAL:-}"
 
-source /opt/ros/jazzy/setup.bash
+# 优先使用当前 ROS 环境；未加载环境时选择本机已安装的发行版。
+ros_distro="${ROS_DISTRO:-}"
+if [[ -z "${ros_distro}" ]]; then
+  if [[ -r /opt/ros/humble/setup.bash ]]; then
+    ros_distro=humble
+  elif [[ -r /opt/ros/jazzy/setup.bash ]]; then
+    ros_distro=jazzy
+  fi
+fi
+if [[ ! -r "/opt/ros/${ros_distro}/setup.bash" ]]; then
+  echo "错误：找不到 ROS 环境，请先 source /opt/ros/<发行版>/setup.bash。" >&2
+  exit 1
+fi
+source "/opt/ros/${ros_distro}/setup.bash"
 if [[ ! -r "${base_workspace}/install/local_setup.bash" ]]; then
   echo "错误：底盘工作空间尚未构建：${base_workspace}" >&2
   exit 1

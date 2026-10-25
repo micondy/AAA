@@ -10,7 +10,7 @@
 > 每次上电、故障检查和实车测试的可复制命令请直接查看：
 > [启动与实车操作.md](启动与实车操作.md)
 
-ROS 2 Jazzy 四轮四转底盘工作区。这里只维护底盘硬件、控制器、模型、配置、网页调试和启动；
+ROS 2 Jazzy / Humble 四轮四转底盘工作区。这里只维护底盘硬件、控制器、模型、配置、网页调试和启动；
 
 ## 有效 ROS 2 包
 
@@ -35,11 +35,40 @@ ROS 2 Jazzy 四轮四转底盘工作区。这里只维护底盘硬件、控制�
 ## 构建
 
 ```bash
-cd /media/scc/Windows_D/AAA/mobile_base_ws
-source /opt/ros/jazzy/setup.bash
+cd /home/nvidia/Desktop/AAA/mobile_base_ws
+source /opt/ros/humble/setup.bash
 colcon build --symlink-install
 source install/setup.bash
 ```
+
+## 本机 Humble 验证与网页演示
+
+Ubuntu 22.04 / ARM64 使用 ROS 2 Humble。系统依赖：
+
+```bash
+sudo apt install ros-humble-ros2-control ros-humble-ros2-controllers \
+  ros-humble-xacro ros-humble-joint-state-publisher-gui \
+  ros-humble-nav2-msgs ros-humble-realtime-tools
+```
+
+构建后，在本工作区运行：
+
+```bash
+./start_mock.sh
+```
+
+浏览器打开 `http://localhost:8080`。此入口使用 `mock_components/GenericSystem`，
+ROS domain 默认为 87，配置保存在 `~/.config/mobile_base_mock`，可通过
+`MOBILE_BASE_MOCK_DOMAIN_ID` 和 `MOBILE_BASE_MOCK_CONFIG_DIR` 覆盖。
+可追加 `use_rviz:=true` 打开模型。按 Ctrl+C 停止。
+网页的 CAN 离线提示反映真实设备状态，不影响 mock 控制器验证。
+Nvblox 消息为可选依赖；未安装时跳过三维网格订阅。
+
+2026-10-24 本机已通过 5 包编译、colcon 30 项测试、额外 24 项网页/启动配置测试，
+以及网页速度下发、mock 里程计、命令超时停车、维护/正常模式切换检查。
+
+Humble 编译和 mock 验证不代表实车验收通过。当前主机仅枚举到一个 `can0`，
+实车配置要求行走 `can0` 和转向 `can1`，连接并核对两路接口后才能进入硬件联调。
 
 ## CAN 与启动
 

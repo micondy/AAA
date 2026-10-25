@@ -7,7 +7,20 @@ set -eo pipefail
 workspace_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 runtime_config="${MOBILE_BASE_CHASSIS_CONFIG:-${HOME}/.config/mobile_base/chassis.yaml}"
 
-source /opt/ros/jazzy/setup.bash
+# 优先使用当前 ROS 环境；未加载环境时选择本机已安装的发行版。
+ros_distro="${ROS_DISTRO:-}"
+if [[ -z "${ros_distro}" ]]; then
+  if [[ -r /opt/ros/humble/setup.bash ]]; then
+    ros_distro=humble
+  elif [[ -r /opt/ros/jazzy/setup.bash ]]; then
+    ros_distro=jazzy
+  fi
+fi
+if [[ ! -r "/opt/ros/${ros_distro}/setup.bash" ]]; then
+  echo "错误：找不到 ROS 环境，请先 source /opt/ros/<发行版>/setup.bash。" >&2
+  exit 1
+fi
+source "/opt/ros/${ros_distro}/setup.bash"
 if [[ ! -f "${workspace_dir}/install/setup.bash" ]]; then
   echo "错误：找不到 install/setup.bash，请先在工作空间运行 colcon build --symlink-install。" >&2
   exit 1

@@ -2,6 +2,13 @@
 
 草菇层架环境三维感知科研工程，基于 ROS 2 Jazzy、自制四轮四转底盘与 RealSense RGB-D 相机。
 
+## ROS 2 Humble / Jetson
+
+`mobile_base_ws` 已在 Jetson Orin NX（Ubuntu 22.04 / ARM64 / ROS 2 Humble）完成编译、测试和 mock 底盘与网页控制验证。
+构建与依赖见[底盘工作区说明](mobile_base_ws/README.md)，验证边界见[Humble 适配记录](mobile_base_ws/HUMBLE_STATUS.md)。
+构建后可在底盘工作区运行 `./start_mock.sh`，浏览器访问 `http://localhost:8080`。
+此入口是控制接口 mock，不包含地面接触、碰撞和虚拟传感器；实车及科研工作区的完整 Humble 适配尚未验收。
+
 ## 工程入口
 
 - [项目当前进展](移动机器人项目当前进展.md)：已完成工作、验证结果和当前边界。

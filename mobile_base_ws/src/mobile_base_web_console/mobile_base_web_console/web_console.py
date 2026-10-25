@@ -25,7 +25,12 @@ from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
 from nav_msgs.msg import OccupancyGrid, Odometry
 from nav2_msgs.action import NavigateToPose
-from nvblox_msgs.msg import Mesh
+try:
+    from nvblox_msgs.msg import Mesh
+except ModuleNotFoundError as exc:
+    if exc.name != "nvblox_msgs":
+        raise
+    Mesh = None  # 可选的三维地图显示，不影响底盘控制。
 from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
@@ -129,7 +134,10 @@ class WebConsoleNode(Node):
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
         )
         self.create_subscription(OccupancyGrid, topics["map"], self._on_map, map_qos)
-        self.create_subscription(Mesh, topics["nvblox_mesh"], self._on_mesh, 10)
+        if Mesh is not None:
+            self.create_subscription(Mesh, topics["nvblox_mesh"], self._on_mesh, 10)
+        else:
+            self.get_logger().info("未安装 nvblox_msgs，跳过三维网格订阅")
         self.create_subscription(
             PoseWithCovarianceStamped, topics["localization_pose"],
             self._on_localization_pose, 10,
@@ -480,7 +488,7 @@ class WebConsoleNode(Node):
         request.timeout.sec = 2
         response = self._await_future(self.switch_controller_client.call_async(request), 3.0)
         if not response.ok:
-            raise RuntimeError(response.message or "controller_manager 拒绝切换控制器")
+            raise RuntimeError(getattr(response, "message", "") or "controller_manager 拒绝切换控制器")
 
     def _steering_feedback_health(self) -> dict[str, Any]:
         now = time.monotonic()
