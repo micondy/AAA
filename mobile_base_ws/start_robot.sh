@@ -5,7 +5,16 @@
 set -eo pipefail
 
 workspace_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-runtime_config="${MOBILE_BASE_CHASSIS_CONFIG:-${HOME}/.config/mobile_base/chassis.yaml}"
+device_config="${HOME}/.config/mobile_base/chassis.yaml"
+repository_config="${workspace_dir}/config/chassis.yaml"
+if [[ -n "${MOBILE_BASE_CHASSIS_CONFIG:-}" ]]; then
+  runtime_config="${MOBILE_BASE_CHASSIS_CONFIG}"
+elif [[ -f "${device_config}" ]]; then
+  runtime_config="${device_config}"
+else
+  runtime_config="${repository_config}"
+  echo "提示：未找到设备本地配置 ${device_config}，使用仓库内已标定配置 ${repository_config}。"
+fi
 
 # 优先使用当前 ROS 环境；未加载环境时选择本机已安装的发行版。
 ros_distro="${ROS_DISTRO:-}"

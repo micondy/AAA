@@ -22,7 +22,7 @@ source "/opt/ros/${ros_distro}/setup.bash"
 source "${workspace_dir}/install/setup.bash"
 set -u
 
-export MOBILE_BASE_CONFIG_DIR="${MOBILE_BASE_CONFIG_DIR:-/opt/mobile_base_ws/config}"
+export MOBILE_BASE_CONFIG_DIR="${MOBILE_BASE_CONFIG_DIR:-${workspace_dir}/config}"
 config_file="${MOBILE_BASE_CONFIG_DIR}/chassis.yaml"
 if [[ ! -f "${config_file}" ]]; then
   echo "找不到机器人端底盘配置：${config_file}" >&2

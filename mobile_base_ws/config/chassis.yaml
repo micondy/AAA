@@ -1,0 +1,89 @@
+schema_version: 1
+can:
+  steering:
+    interface: can1
+    bitrate: 1000000
+    fd: false
+  drive:
+    interface: can0
+    bitrate: 500000
+    fd: false
+geometry:
+  wheel_radius: 0.1
+  wheelbase: 0.6
+  track_width: 0.5
+  body_length: 0.62
+  body_width: 0.58
+  footprint_padding: 0.02
+  wheel_width: 0.0683
+  wheel_center_offset: 0.043
+safety:
+  max_wheel_angular_velocity: 20.0
+  max_wheel_angular_acceleration: 8.0
+  steering_limit_deg: 90.0
+  drive_alignment_tolerance_deg: 5.0
+  controller_command_timeout: 0.25
+  steering_feedback_timeout: 0.5
+  steering_max_feedback_jump_rad: 1.0
+  maintenance_max_rpm: 20.0
+  maintenance_max_steering_angle_deg: 90.0
+  maintenance_max_steering_step_deg: 180.0
+  maintenance_max_steering_speed_rad_s: 0.15
+  command_timeout: 0.5
+wheels:
+  front_left:
+    label: 左前轮
+    steering:
+      motor_id: 1
+      master_id: 17
+      direction: -1
+      offset_rad: 2.535309076309204
+      max_velocity_rad_s: 0.15
+    drive:
+      node_id: 5
+      channel: 1
+      direction: 1
+      gear_ratio: 1.0
+      max_motor_rpm: 1000.0
+  front_right:
+    label: 右前轮
+    steering:
+      motor_id: 2
+      master_id: 18
+      direction: -1
+      offset_rad: 0.692559003829956
+      max_velocity_rad_s: 0.15
+    drive:
+      node_id: 5
+      channel: 2
+      direction: -1
+      gear_ratio: 1.0
+      max_motor_rpm: 1000.0
+  rear_left:
+    label: 左后轮
+    steering:
+      motor_id: 4
+      master_id: 20
+      direction: -1
+      offset_rad: -3.085923433303833
+      max_velocity_rad_s: 0.15
+    drive:
+      node_id: 6
+      channel: 1
+      direction: 1
+      gear_ratio: 1.0
+      max_motor_rpm: 1000.0
+  rear_right:
+    label: 右后轮
+    steering:
+      motor_id: 3
+      master_id: 19
+      direction: -1
+      offset_rad: -2.061375141143799
+      max_velocity_rad_s: 0.15
+    drive:
+      node_id: 6
+      channel: 2
+      direction: -1
+      gear_ratio: 1.0
+      max_motor_rpm: 1000.0
