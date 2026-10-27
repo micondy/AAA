@@ -1,0 +1,3 @@
+action_status,case,error_code,error_msg,goal_position_error_m,goal_yaw_error_rad,path_end_x,path_end_y,path_end_yaw,path_poses,path_start_x,path_start_y,path_start_yaw,planner,planning_time_ms,pure_rotation_segments,repeat,scenario,start_position_error_m,status,total_yaw_change_rad,translation_length_m,wall_time_ms
+4,diagonal_pose_change,0,,0.0,0.0,8.8,8.5,1.570796,196,1.0,1.0,0.785398,smac_2d,4.674,0,1,open_space,0.0,SUCCEEDED,2.977213,11.647014,7.864
+4,lateral_same_heading,0,,0.0,0.0,8.8,5.0,0.0,157,1.0,5.0,0.785398,smac_2d,2.423,0,1,open_space,0.0,SUCCEEDED,2.865953,8.558028,4.524

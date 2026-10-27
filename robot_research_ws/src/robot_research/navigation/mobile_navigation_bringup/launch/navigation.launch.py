@@ -30,6 +30,7 @@ def generate_launch_description():
                 "required_movement_radius": LaunchConfiguration(
                     "required_movement_radius"
                 ),
+                "lattice_filepath": LaunchConfiguration("lattice_file"),
             },
             convert_types=True,
         ),
@@ -258,6 +259,13 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "params_file",
             default_value=str(share / "config" / "nav2.yaml"),
+        ),
+        DeclareLaunchArgument(
+            "lattice_file",
+            default_value=str(
+                share / "lattice" / "nav2_official_omni_16_5cm_r0.5.json"
+            ),
+            description="Omnidirectional motion primitives for Smac State Lattice",
         ),
         DeclareLaunchArgument(
             "costmap_overlay_file",

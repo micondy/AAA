@@ -1,0 +1,34 @@
+map_server:
+  ros__parameters:
+    use_sim_time: false
+    yaml_filename: ""
+
+planner_server:
+  ros__parameters:
+    use_sim_time: false
+    expected_planner_frequency: 1.0
+    costmap_update_timeout: 2.0
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: false
+      update_frequency: 5.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      resolution: 0.05
+      track_unknown_space: false
+      rolling_window: false
+      # Current Isaac baseline: 0.66 x 0.62 m polygon plus 0.02 m padding.
+      footprint: "[[0.33, 0.31], [0.33, -0.31], [-0.33, -0.31], [-0.33, 0.31]]"
+      footprint_padding: 0.02
+      plugins: [static_layer, inflation_layer]
+      static_layer:
+        plugin: nav2_costmap_2d::StaticLayer
+        map_subscribe_transient_local: true
+      inflation_layer:
+        plugin: nav2_costmap_2d::InflationLayer
+        inflation_radius: 0.70
+        cost_scaling_factor: 5.0
+      always_send_full_costmap: true

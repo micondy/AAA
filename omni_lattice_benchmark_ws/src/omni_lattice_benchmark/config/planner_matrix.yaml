@@ -1,0 +1,14 @@
+planners:
+  navfn_astar:
+    profile: planner_navfn.yaml
+  smac_2d:
+    profile: planner_smac_2d.yaml
+  smac_lattice_official_omni:
+    profile: planner_smac_lattice.yaml
+    lattice: nav2_official_omni_16_5cm_r0.5.json
+  smac_lattice_sequential_ablation:
+    profile: planner_smac_lattice.yaml
+    lattice: omni_sequential_16_5cm.json
+  smac_lattice_coupled:
+    profile: planner_smac_lattice.yaml
+    lattice: omni_coupled_16_5cm.json

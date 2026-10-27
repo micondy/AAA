@@ -18,18 +18,39 @@ def load_costmap_overlay(name):
         return yaml.safe_load(stream)
 
 
-def test_initial_controller_is_forward_only_and_slow():
+def test_controller_uses_mppi_omni_with_lateral_motion_enabled():
     config = load_nav2()
     controller = config["controller_server"]["ros__parameters"]
     follow = controller["FollowPath"]
 
-    assert follow["plugin"].endswith("RegulatedPurePursuitController")
-    assert 0.0 < follow["desired_linear_vel"] <= 0.25
-    assert 0.05 <= follow["min_approach_linear_velocity"]
-    assert follow["allow_reversing"] is False
-    assert follow["use_collision_detection"] is True
+    smoother = config["velocity_smoother"]["ros__parameters"]
+
+    assert follow["plugin"].endswith("MPPIController")
+    assert follow["motion_model"] == "Omni"
+    assert 0.0 < follow["vy_max"] <= follow["vx_max"]
+    assert "PreferForwardCritic" not in follow["critics"]
+    assert follow["PathAngleCritic"]["mode"] == 2
+    assert follow["CostCritic"]["consider_footprint"] is True
+    assert smoother["max_velocity"][1] > 0.0
+    assert smoother["min_velocity"][1] < 0.0
     assert controller["progress_checker"]["plugin"].endswith("PoseProgressChecker")
     assert controller["progress_checker"]["required_movement_angle"] > 0.0
+
+
+def test_global_planner_uses_omni_state_lattice():
+    config = load_nav2()
+    planner = config["planner_server"]["ros__parameters"]["GridBased"]
+    lattice = PACKAGE_ROOT / "lattice" / "nav2_official_omni_16_5cm_r0.5.json"
+    launch_text = (PACKAGE_ROOT / "launch" / "navigation.launch.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert planner["plugin"].endswith("SmacPlannerLattice")
+    assert planner["lattice_filepath"] == "__LATTICE_FILE__"
+    assert lattice.is_file()
+    assert '"lattice_filepath": LaunchConfiguration("lattice_file")' in launch_text
+    assert "nav2_official_omni_16_5cm_r0.5.json" in launch_text
+    assert 'get_package_share_directory("omni_lattice_benchmark")' not in launch_text
 
 
 def test_path_smoother_is_configured_and_lifecycle_managed():

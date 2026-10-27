@@ -1,0 +1,5 @@
+action_status,case,error_code,error_msg,goal_position_error_m,goal_yaw_error_rad,path_end_x,path_end_y,path_end_yaw,path_poses,path_start_x,path_start_y,path_start_yaw,planner,planning_time_ms,pure_rotation_segments,repeat,scenario,start_position_error_m,status,total_yaw_change_rad,translation_length_m,wall_time_ms
+4,inside_corner_up,0,,0.028284,0.0,5.5,8.82,1.570796,231,1.0,1.52,0.0,smac_lattice_official_omni,3.717,0,1,l_corridor,0.0,SUCCEEDED,1.570796,11.516431,6.949
+4,inside_corner_down,0,,0.028284,0.0,1.02,1.5,0.0,262,5.52,8.8,1.570796,smac_lattice_official_omni,19.635,27,1,l_corridor,0.0,SUCCEEDED,5.639684,11.738172,23.057
+4,inside_corner_up,0,,0.028284,0.0,5.5,8.82,1.570796,231,1.0,1.52,0.0,smac_lattice_official_omni,1.446,0,2,l_corridor,0.0,SUCCEEDED,1.570796,11.516431,3.834
+4,inside_corner_down,0,,0.028284,0.0,1.02,1.5,0.0,262,5.52,8.8,1.570796,smac_lattice_official_omni,21.685,27,2,l_corridor,0.0,SUCCEEDED,5.639684,11.738172,25.153

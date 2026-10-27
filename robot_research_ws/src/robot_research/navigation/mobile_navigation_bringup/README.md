@@ -9,8 +9,8 @@
 ```text
 底盘里程计 -> /swerve_controller/odom -> odom -> base_link
 固定 D435i RGB-D + 底盘里程计 -> RTAB-Map -> map -> odom
-固定 D435i PointCloud2 -> Nav2 costmaps -> Regulated Pure Pursuit
-Regulated Pure Pursuit -> velocity_smoother -> collision_monitor
+固定 D435i PointCloud2 -> Nav2 costmaps -> Smac State Lattice（Omni）
+Smac State Lattice -> MPPI（Omni）-> velocity_smoother -> collision_monitor
   -> /swerve_controller/cmd_vel
 ```
 
