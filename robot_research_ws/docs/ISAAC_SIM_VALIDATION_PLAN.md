@@ -7,6 +7,8 @@
 
 说明：第 1～6 节保留最初 Carter 验证方案作为历史基线；当前实施主线是第 6 节后半的
 自制底盘 S7。当前 TF 所有权以 S7 记录为准，不再以 Carter 的纯视觉里程计为准。
+2026-10-27 起，主导航配置已切换为 Smac State Lattice（Omni）+ MPPI Omni；下文的
+Regulated Pure Pursuit 与差速描述仅表示 Carter 早期验证环境，不代表当前自制底盘配置。
 
 ## 1. 目的与结论
 

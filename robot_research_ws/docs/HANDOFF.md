@@ -86,8 +86,8 @@ source /media/scc/Windows_D/AAA/robot_research_ws/tools/source_robot_stack.bash
 ### 3.4 Nav2 自主导航与安全链
 
 - 支持网页、RViz 和命令行发送 `NavigateToPose`。
-- 使用 RTAB-Map 静态地图、局部/全局 costmap、Regulated Pure Pursuit、速度平滑器和
-  Collision Monitor。
+- 使用 RTAB-Map 静态地图、局部/全局 costmap、Smac State Lattice（Omni）、
+  MPPI（Omni）、速度平滑器和 Collision Monitor。
 - 仿真命令链为：
 
   ```text
@@ -429,4 +429,3 @@ curl -fsS http://127.0.0.1:8080/api/scene3d
 - 不覆盖正式地图、数据库、bag 或既有结果；新运行使用新的、有含义的文件名。
 - 工作区可能包含大量尚未提交的用户改动。修改前先看 `git status`，不要 reset、checkout 或删除
   不属于当前任务的文件。
-

@@ -127,9 +127,10 @@ ros2 launch mobile_navigation_bringup carter_navigation.launch.py \
 ```
 
 RViz 中以 `map` 为 Fixed Frame，用 “Nav2 Goal” 先发送前方约 0.5 m 的空闲目标。2026-09-12
-单目标实测返回 `SUCCEEDED`。当前控制基线为 Regulated Pure Pursuit；碰撞监控仍位于最终
-速度出口，未被跳过。相机静态 TF 与整帧 RGB-D 配置后的最终复测未出现 collision monitor
-TF/源超时警告。连续 10 目标与障碍故障注入仍待验收。
+单目标实测返回 `SUCCEEDED`。该记录使用当时的 Regulated Pure Pursuit 历史基线；当前
+自制底盘主配置已经是 Smac State Lattice + MPPI Omni。碰撞监控仍位于最终速度出口，未被
+跳过。相机静态 TF 与整帧 RGB-D 配置后的最终复测未出现 collision monitor TF/源超时警告。
+连续 10 目标与障碍故障注入仍待验收。
 
 ## 自制四轮四转底盘
 

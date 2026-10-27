@@ -1,6 +1,10 @@
 # 固定 D435i 建图、定位、Nav2 与前向障碍实施计划
 
-更新日期：2026-09-21。
+更新日期：2026-10-27。
+
+> 状态更新：本文的 N1～N5 前向差速方案保留为早期安全验收记录。当前主导航已切换为
+> Smac State Lattice（官方 Omni lattice）+ MPPI Omni，并放开 `vy`。前置 D435i 对侧后方
+> 动态障碍仍有盲区，因此全向实车测试必须限速、有人监护，且不能替代实体急停。
 
 当前正在安装底盘电池，但整车供电、急停和看门狗尚未验收，暂不适合落地自主移动。实车
 N1～N5 之前，先按
@@ -19,9 +23,8 @@ RTAB-Map 只发布 `map -> odom`。
 4. D435i 前向 PointCloud2 动静态障碍更新；
 5. Nav2 到自研四轮四转控制器的安全速度链。
 
-本阶段只使用前向相机，因此 Nav2 按前向 `DiffDrive` 模型运行，不自动横移，也不执行
-倒车恢复。底盘的横移能力保留给有人确认的局部控制；等侧向/后向感知覆盖后再评估全向
-导航。
+早期 N1～N5 阶段只使用前向相机并按 `DiffDrive` 模型验收。当前软件已进入全向算法阶段，
+但侧向/后向感知覆盖尚未补齐，不能把“算法可输出横移”理解为“实车已具备全向安全能力”。
 
 ## 软件链
 
@@ -37,7 +40,8 @@ RTAB-Map 只发布 `map -> odom`。
   -> collision_monitor 前向停止区
 
 NavigateToPose
-  -> Regulated Pure Pursuit（前向差速基线）
+  -> Smac State Lattice（Omni）
+  -> MPPI（Omni）
   -> velocity_smoother
   -> collision_monitor
   -> /swerve_controller/cmd_vel
@@ -50,7 +54,7 @@ NavigateToPose
 - [x] `mobile_navigation_bringup` 建图入口。
 - [x] `mobile_navigation_bringup` 定位 + Nav2 入口。
 - [x] D435i 点云进入局部 voxel layer 和全局 obstacle layer。
-- [x] 保守 footprint、低速 Regulated Pure Pursuit、速度平滑和前向碰撞停止区。
+- [x] 保守 footprint、MPPI 全车轮廓代价、全向速度平滑和前向碰撞停止区。
 - [x] 无倒车恢复的第一版行为树。
 - [x] YAML/XML/launch 静态测试和 colcon 构建。
 - [x] Nova Carter 1.0×0.7 m 右转闭环建图并保存 239×297、0.05 m/格地图。
@@ -116,7 +120,8 @@ NavigateToPose
 ## 当前限制
 
 - 仿真当前使用理想化底盘 odom；实车轮速/转角 odom 与 D435i IMU 融合尚未验收。
-- 前向 D435i 不能保证侧后方安全，第一版禁用全向 Nav2 和倒车恢复。
+- 前向 D435i 不能保证侧后方安全；虽然当前 Nav2 已启用全向规划控制，实车仍需限速监护，
+  并应在补齐侧后感知后再做无人全向运行验收。
 - `nav2.yaml` footprint 来自当前 URDF 外形的保守估计，不是最终实测值。
 - PointCloud2 障碍和 collision monitor 不能替代实体急停及底盘本地通信看门狗。
 - Nova Carter 仿真只能验证差速模式下的上层闭环，不能验证自研四轮四转控制和真实制动。
@@ -141,8 +146,9 @@ NavigateToPose
 
 - 数据库：`maps/isaac_indoor_top_rt_01.db`，562 个节点、23 个全局闭环、26 个局部空间闭环；
 - RTAB-Map 已固定为平面优化，`map -> base_link` 的 z、roll、pitch 均为零；
-- Nav2 的 planner、simple smoother、Regulated Pure Pursuit、velocity smoother 和
-  collision monitor 均由 lifecycle manager 激活；
+- 当时 Nav2 的 planner、simple smoother、Regulated Pure Pursuit、velocity smoother 和
+  collision monitor 均由 lifecycle manager 激活；该条仅为 2026-09-13 历史基线，当前控制器
+  已替换为 MPPI Omni；
 - 从约 `(-2.49, 2.18, -28.9 deg)` 导航到 `(-1.89, 2.54, 31 deg)`，底盘实际移动约
   0.55 m，`NavigateToPose` 返回 `SUCCEEDED`（error_code=0）；
 - Isaac RGB-D 偶发约 1.5 秒帧间隔会触发 0.75 秒传感器超时。仅自制底盘仿真 profile

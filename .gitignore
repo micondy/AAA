@@ -8,6 +8,8 @@
 **/.idea/
 **/__pycache__/
 **/.pytest_cache/
+**/*.vc.db
+**/*.vc.db.lock
 *.py[cod]
 *.egg-info/
 .coverage
@@ -46,6 +48,7 @@ compile_commands.json
 *.o
 *.log
 **/local_install/
+/tmp/
 .env
 .env.*
 *.pem
