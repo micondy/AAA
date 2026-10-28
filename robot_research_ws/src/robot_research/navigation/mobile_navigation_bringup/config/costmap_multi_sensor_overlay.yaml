@@ -1,0 +1,188 @@
+# Four RGB-D cameras plus two 2-D LiDARs.  Topic names are the hardware
+# contract documented in hardware_sensors.yaml.
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      voxel_layer:
+        observation_sources: front_depth rear_depth left_depth right_depth front_laser rear_laser
+        front_depth:
+          topic: /sensors/nav_camera/depth/color/points
+          data_type: PointCloud2
+          clearing: true
+          marking: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.80
+          obstacle_min_range: 0.20
+          obstacle_max_range: 3.00
+          raytrace_min_range: 0.20
+          raytrace_max_range: 3.50
+        rear_depth:
+          topic: /sensors/rear_camera/depth/color/points
+          data_type: PointCloud2
+          clearing: true
+          marking: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.80
+          obstacle_min_range: 0.20
+          obstacle_max_range: 3.00
+          raytrace_min_range: 0.20
+          raytrace_max_range: 3.50
+        left_depth:
+          topic: /sensors/left_camera/depth/color/points
+          data_type: PointCloud2
+          clearing: true
+          marking: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.80
+          obstacle_min_range: 0.20
+          obstacle_max_range: 3.00
+          raytrace_min_range: 0.20
+          raytrace_max_range: 3.50
+        right_depth:
+          topic: /sensors/right_camera/depth/color/points
+          data_type: PointCloud2
+          clearing: true
+          marking: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.80
+          obstacle_min_range: 0.20
+          obstacle_max_range: 3.00
+          raytrace_min_range: 0.20
+          raytrace_max_range: 3.50
+        front_laser:
+          topic: /sensors/front_lidar/scan
+          data_type: LaserScan
+          clearing: true
+          marking: true
+          obstacle_min_range: 0.05
+          obstacle_max_range: 15.0
+          raytrace_min_range: 0.05
+          raytrace_max_range: 16.0
+        rear_laser:
+          topic: /sensors/rear_lidar/scan
+          data_type: LaserScan
+          clearing: true
+          marking: true
+          obstacle_min_range: 0.05
+          obstacle_max_range: 15.0
+          raytrace_min_range: 0.05
+          raytrace_max_range: 16.0
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      obstacle_layer:
+        observation_sources: front_depth rear_depth left_depth right_depth front_laser rear_laser
+        front_depth:
+          topic: /sensors/nav_camera/depth/color/points
+          data_type: PointCloud2
+          clearing: true
+          marking: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.80
+          obstacle_min_range: 0.20
+          obstacle_max_range: 3.00
+          raytrace_min_range: 0.20
+          raytrace_max_range: 3.50
+        rear_depth:
+          topic: /sensors/rear_camera/depth/color/points
+          data_type: PointCloud2
+          clearing: true
+          marking: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.80
+          obstacle_min_range: 0.20
+          obstacle_max_range: 3.00
+          raytrace_min_range: 0.20
+          raytrace_max_range: 3.50
+        left_depth:
+          topic: /sensors/left_camera/depth/color/points
+          data_type: PointCloud2
+          clearing: true
+          marking: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.80
+          obstacle_min_range: 0.20
+          obstacle_max_range: 3.00
+          raytrace_min_range: 0.20
+          raytrace_max_range: 3.50
+        right_depth:
+          topic: /sensors/right_camera/depth/color/points
+          data_type: PointCloud2
+          clearing: true
+          marking: true
+          min_obstacle_height: 0.05
+          max_obstacle_height: 1.80
+          obstacle_min_range: 0.20
+          obstacle_max_range: 3.00
+          raytrace_min_range: 0.20
+          raytrace_max_range: 3.50
+        front_laser:
+          topic: /sensors/front_lidar/scan
+          data_type: LaserScan
+          clearing: true
+          marking: true
+          obstacle_min_range: 0.05
+          obstacle_max_range: 15.0
+          raytrace_min_range: 0.05
+          raytrace_max_range: 16.0
+        rear_laser:
+          topic: /sensors/rear_lidar/scan
+          data_type: LaserScan
+          clearing: true
+          marking: true
+          obstacle_min_range: 0.05
+          obstacle_max_range: 15.0
+          raytrace_min_range: 0.05
+          raytrace_max_range: 16.0
+
+collision_monitor:
+  ros__parameters:
+    polygons: [EmergencyStop]
+    EmergencyStop:
+      type: polygon
+      # Provisional software boundary around the 0.84 x 0.68 m footprint.
+      # Re-measure against braking tests before normal-speed operation.
+      points: "[[0.90, 0.62], [0.90, -0.62], [-0.90, -0.62], [-0.90, 0.62]]"
+      action_type: stop
+      min_points: 4
+      visualize: true
+      polygon_pub_topic: /collision_monitor/emergency_stop
+      enabled: true
+    observation_sources: [front_depth, rear_depth, left_depth, right_depth, front_laser, rear_laser]
+    front_depth:
+      type: pointcloud
+      topic: /sensors/nav_camera/depth/color/points
+      min_height: 0.05
+      max_height: 1.80
+      use_global_height: false
+      enabled: true
+    rear_depth:
+      topic: /sensors/rear_camera/depth/color/points
+      type: pointcloud
+      min_height: 0.05
+      max_height: 1.80
+      use_global_height: false
+      enabled: true
+    left_depth:
+      topic: /sensors/left_camera/depth/color/points
+      type: pointcloud
+      min_height: 0.05
+      max_height: 1.80
+      use_global_height: false
+      enabled: true
+    right_depth:
+      topic: /sensors/right_camera/depth/color/points
+      type: pointcloud
+      min_height: 0.05
+      max_height: 1.80
+      use_global_height: false
+      enabled: true
+    front_laser:
+      type: scan
+      topic: /sensors/front_lidar/scan
+      enabled: true
+    rear_laser:
+      topic: /sensors/rear_lidar/scan
+      type: scan
+      enabled: true

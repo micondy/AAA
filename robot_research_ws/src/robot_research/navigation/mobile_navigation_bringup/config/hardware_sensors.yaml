@@ -1,0 +1,48 @@
+# Jazzy computer-side sensor inventory for the physical 4WIS robot.
+#
+# Replace every CHANGE_ME serial before launch.  Extrinsics deliberately have
+# no guessed defaults: keep publish_tf false when robot_description already
+# owns the transform, or set it true only after filling measured xyz/rpy.
+cameras:
+  - name: nav_camera
+    role: front_localization
+    serial_no: CHANGE_ME_FRONT_CAMERA_SERIAL
+    publish_tf: false
+    xyz: [0.0, 0.0, 0.0]
+    rpy: [0.0, 0.0, 0.0]
+  - name: rear_camera
+    role: rear_obstacles
+    serial_no: CHANGE_ME_REAR_CAMERA_SERIAL
+    publish_tf: false
+    xyz: [0.0, 0.0, 0.0]
+    rpy: [0.0, 0.0, 0.0]
+  - name: left_camera
+    role: left_obstacles
+    serial_no: CHANGE_ME_LEFT_CAMERA_SERIAL
+    publish_tf: false
+    xyz: [0.0, 0.0, 0.0]
+    rpy: [0.0, 0.0, 0.0]
+  - name: right_camera
+    role: right_obstacles
+    serial_no: CHANGE_ME_RIGHT_CAMERA_SERIAL
+    publish_tf: false
+    xyz: [0.0, 0.0, 0.0]
+    rpy: [0.0, 0.0, 0.0]
+
+# LiDAR drivers run outside this launch because the hardware model has not yet
+# been selected.  Each driver must publish sensor_msgs/LaserScan on the exact
+# topic below.  Rename topics here and in costmap_multi_sensor_overlay.yaml
+# together if a driver cannot be configured to use these names.
+lidars:
+  - name: front_lidar
+    topic: /sensors/front_lidar/scan
+    frame_id: front_lidar_link
+    publish_tf: false
+    xyz: [0.0, 0.0, 0.0]
+    rpy: [0.0, 0.0, 0.0]
+  - name: rear_lidar
+    topic: /sensors/rear_lidar/scan
+    frame_id: rear_lidar_link
+    publish_tf: false
+    xyz: [0.0, 0.0, 0.0]
+    rpy: [0.0, 0.0, 0.0]

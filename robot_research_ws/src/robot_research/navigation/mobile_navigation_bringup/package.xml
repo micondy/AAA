@@ -2,7 +2,7 @@
 <package format="3">
   <name>mobile_navigation_bringup</name>
   <version>0.1.0</version>
-  <description>RTAB-Map localization and Nav2 bringup with D435i front obstacles.</description>
+  <description>RTAB-Map localization and Nav2 bringup with multi-camera and LiDAR obstacle sensing.</description>
   <maintainer email="2637781202@qq.com">micondy</maintainer>
   <license>Apache-2.0</license>
 

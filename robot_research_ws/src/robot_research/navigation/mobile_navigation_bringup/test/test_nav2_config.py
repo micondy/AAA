@@ -91,6 +91,42 @@ def test_costmaps_use_rtabmap_and_fixed_front_camera():
     assert global_map["inflation_layer"]["inflation_radius"] >= 0.59
 
 
+def test_hardware_profile_has_four_serial_bound_cameras_and_two_lidars():
+    with (PACKAGE_ROOT / "config" / "hardware_sensors.yaml").open(
+        encoding="utf-8"
+    ) as stream:
+        sensors = yaml.safe_load(stream)
+    overlay = load_costmap_overlay("costmap_multi_sensor_overlay.yaml")
+    launch_text = (
+        PACKAGE_ROOT / "launch" / "hardware_multi_sensor_navigation.launch.py"
+    ).read_text(encoding="utf-8")
+
+    assert [camera["name"] for camera in sensors["cameras"]] == [
+        "nav_camera", "rear_camera", "left_camera", "right_camera"
+    ]
+    assert len({camera["serial_no"] for camera in sensors["cameras"]}) == 4
+    assert [lidar["name"] for lidar in sensors["lidars"]] == [
+        "front_lidar", "rear_lidar"
+    ]
+    assert '"start_camera": "false"' in launch_text
+    assert '"odom_source": "external"' in launch_text
+    assert 'camera_namespace": "sensors"' in launch_text
+    assert 'Set the measured serial_no' in launch_text
+
+    expected_sources = {
+        "front_depth", "rear_depth", "left_depth", "right_depth",
+        "front_laser", "rear_laser",
+    }
+    local = overlay["local_costmap"]["local_costmap"]["ros__parameters"]["voxel_layer"]
+    global_layer = overlay["global_costmap"]["global_costmap"]["ros__parameters"]["obstacle_layer"]
+    monitor = overlay["collision_monitor"]["ros__parameters"]
+    assert set(local["observation_sources"].split()) == expected_sources
+    assert set(global_layer["observation_sources"].split()) == expected_sources
+    assert set(monitor["observation_sources"]) == expected_sources
+    assert local["front_laser"]["data_type"] == "LaserScan"
+    assert monitor["front_laser"]["type"] == "scan"
+
+
 def test_carter_navigation_profile_pins_sim_clock_and_safe_output():
     launch_text = (PACKAGE_ROOT / "launch" / "carter_navigation.launch.py").read_text(
         encoding="utf-8"

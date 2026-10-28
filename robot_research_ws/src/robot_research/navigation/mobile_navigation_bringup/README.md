@@ -68,6 +68,28 @@ ros2 launch mobile_navigation_bringup navigation.launch.py \
 在 RViz2 中确认 TF、RTAB-Map 地图、局部/全局 costmap 和前向停止多边形正确后，才发送
 短距离 `NavigateToPose` 目标。
 
+## 实机四深度相机 + 双激光雷达
+
+Jazzy 电脑端使用 `hardware_multi_sensor_navigation.launch.py`。四个 D435i 分别固定为
+`nav_camera`（前/定位）、`rear_camera`、`left_camera` 和 `right_camera`；两路雷达接口为
+`/sensors/front_lidar/scan` 与 `/sensors/rear_lidar/scan`。四路点云和两路 `LaserScan`
+都会进入局部/全局 costmap 以及 Collision Monitor。RTAB-Map 只使用前相机，其他三台
+用于环视避障，避免在完成多相机时空标定前错误地融合 RGB-D 里程计。
+
+先编辑 `config/hardware_sensors.yaml`，填入四台相机的唯一序列号。TF 应优先由整机 URDF
+发布；若暂时使用该配置发布静态 TF，必须填入实测 `xyz/rpy` 后再把对应
+`publish_tf` 改为 `true`。两个雷达的具体驱动由硬件型号决定，驱动需在此入口之前启动并
+发布上述两个标准 `sensor_msgs/LaserScan` 话题。
+
+```bash
+ros2 launch mobile_navigation_bringup hardware_multi_sensor_navigation.launch.py \
+  database_path:=$HOME/.ros/mobile_robot_map.db
+```
+
+启动前必须确认六路话题持续更新、每个传感器到 `base_link` 的 TF 唯一且方向正确。
+`EmergencyStop` 多边形只是保守的软件初值，实车低速测试时还要按实际外廓、盲区、雷达
+安装高度和制动距离重新标定。
+
 ## Nova Carter 仿真 profile
 
 这两个入口固定 `start_camera:=false` 和 `use_sim_time:=true`；导航入口还把碰撞监控后的
