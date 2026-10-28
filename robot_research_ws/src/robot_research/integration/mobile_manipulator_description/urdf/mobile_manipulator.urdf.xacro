@@ -21,6 +21,7 @@
   <xacro:arg name="nav_camera_mount_xyz" default="0.10 0 1.70"/>
   <xacro:arg name="nav_camera_mount_rpy" default="0 0.20944 0"/>
   <xacro:arg name="nav_camera_use_nominal_extrinsics" default="false"/>
+  <xacro:arg name="surround_sensors_enabled" default="false"/>
   <!-- Required as global substitutions by parts of the upstream hand macro. -->
   <xacro:arg name="hand" default="true"/>
   <xacro:arg name="ee_type" default="openarm_hand"/>
@@ -37,6 +38,43 @@
       use_nominal_extrinsics="$(arg nav_camera_use_nominal_extrinsics)">
       <origin xyz="$(arg nav_camera_mount_xyz)" rpy="$(arg nav_camera_mount_rpy)"/>
     </xacro:sensor_d435i>
+  </xacro:if>
+
+  <xacro:if value="$(arg surround_sensors_enabled)">
+    <xacro:sensor_d435i
+      parent="base_link"
+      name="rear_camera"
+      use_nominal_extrinsics="$(arg nav_camera_use_nominal_extrinsics)">
+      <origin xyz="-0.25 0 0.65" rpy="0 0 3.14159265"/>
+    </xacro:sensor_d435i>
+    <xacro:sensor_d435i
+      parent="base_link"
+      name="left_camera"
+      use_nominal_extrinsics="$(arg nav_camera_use_nominal_extrinsics)">
+      <origin xyz="0 0.28 0.65" rpy="0 0 1.57079633"/>
+    </xacro:sensor_d435i>
+    <xacro:sensor_d435i
+      parent="base_link"
+      name="right_camera"
+      use_nominal_extrinsics="$(arg nav_camera_use_nominal_extrinsics)">
+      <origin xyz="0 -0.28 0.65" rpy="0 0 -1.57079633"/>
+    </xacro:sensor_d435i>
+
+    <xacro:macro name="planar_lidar_mount" params="name xyz">
+      <link name="${name}_link">
+        <visual>
+          <geometry><cylinder radius="0.035" length="0.045"/></geometry>
+          <material name="mount_gray"/>
+        </visual>
+      </link>
+      <joint name="base_to_${name}" type="fixed">
+        <parent link="base_link"/>
+        <child link="${name}_link"/>
+        <origin xyz="${xyz}" rpy="0 0 0"/>
+      </joint>
+    </xacro:macro>
+    <xacro:planar_lidar_mount name="front_lidar" xyz="0.30 0 0.32"/>
+    <xacro:planar_lidar_mount name="rear_lidar" xyz="-0.30 0 0.32"/>
   </xacro:if>
 
   <material name="mount_gray">

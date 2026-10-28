@@ -26,6 +26,7 @@ def generate_launch_description():
             " nav_camera_mount_xyz:='", LaunchConfiguration("nav_camera_mount_xyz"), "'",
             " nav_camera_mount_rpy:='", LaunchConfiguration("nav_camera_mount_rpy"), "'",
             " nav_camera_use_nominal_extrinsics:=", LaunchConfiguration("nav_camera_use_nominal_extrinsics"),
+            " surround_sensors_enabled:=", LaunchConfiguration("surround_sensors_enabled"),
         ]), value_type=str)
     }
 
@@ -39,6 +40,7 @@ def generate_launch_description():
         DeclareLaunchArgument("nav_camera_mount_xyz", default_value="0.10 0 1.70"),
         DeclareLaunchArgument("nav_camera_mount_rpy", default_value="0 0.20944 0"),
         DeclareLaunchArgument("nav_camera_use_nominal_extrinsics", default_value="false"),
+        DeclareLaunchArgument("surround_sensors_enabled", default_value="false"),
         Node(
             package="robot_state_publisher",
             executable="robot_state_publisher",

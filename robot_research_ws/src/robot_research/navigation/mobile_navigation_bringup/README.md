@@ -90,6 +90,30 @@ ros2 launch mobile_navigation_bringup hardware_multi_sensor_navigation.launch.py
 `EmergencyStop` 多边形只是保守的软件初值，实车低速测试时还要按实际外廓、盲区、雷达
 安装高度和制动距离重新标定。
 
+### Isaac Sim 六传感器仿真
+
+先启动四相机、双 RTX 2-D LiDAR 的 Isaac 场景。以下 160×120@5 Hz 配置已在
+8 GB 显存的 RTX 5060 Laptop 上完成六路 ROS 消息采样；提高到 320×240@10 Hz 前需
+重新测量渲染速率和传感器超时：
+
+```bash
+/home/scc/isaac-sim-standalone-6.0.1-linux-x86_64/python.sh \
+  tools/isaac_sim/run_mobile_manipulator.py --ros --enable-multi-sensor-nav \
+  --nav-camera-width 160 --nav-camera-height 120 --nav-camera-hz 5
+```
+
+确认 `/clock`、四路 `/sensors/*_camera/depth/color/points` 和两路
+`/sensors/*_lidar/scan` 后，在另一个终端启动仿真导航：
+
+```bash
+source tools/source_robot_stack.bash
+ros2 launch mobile_navigation_bringup mobile_base_multi_sensor_sim_navigation.launch.py \
+  database_path:=$HOME/.ros/isaac_multi_sensor.db
+```
+
+仿真和实机共用话题及 costmap overlay，但仿真把传感器超时放宽到 2 秒。四相机安装位姿
+目前是仿真布局，不能复制为实机外参。
+
 ## Nova Carter 仿真 profile
 
 这两个入口固定 `start_camera:=false` 和 `use_sim_time:=true`；导航入口还把碰撞监控后的

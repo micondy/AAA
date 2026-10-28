@@ -32,6 +32,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Publish the provisional top-mounted navigation D435 RGB-D contract.",
     )
+    parser.add_argument(
+        "--enable-multi-sensor-nav",
+        action="store_true",
+        help="Publish four RGB-D cameras and two RTX 2-D LiDAR scans.",
+    )
     parser.add_argument("--nav-camera-width", type=int, default=640)
     parser.add_argument("--nav-camera-height", type=int, default=480)
     parser.add_argument("--nav-camera-hz", type=float, default=15.0)
@@ -134,14 +139,19 @@ ROBOT_PRIM = "/World/MobileManipulator"
 BASE_PRIM = ROBOT_PRIM + "/MobileBase"
 OPENARM_PRIM = ROBOT_PRIM + "/OpenArm"
 BASE_LINK_PRIM = BASE_PRIM + "/Geometry/base_link"
-NAV_CAMERA_MOUNT_PRIM = BASE_LINK_PRIM + "/nav_camera_mount"
-NAV_CAMERA_PRIM = NAV_CAMERA_MOUNT_PRIM + "/nav_camera_color"
-NAV_CAMERA_GRAPH = "/ProjectNavCamera"
 ROS_GRAPH = "/MobileManipulatorBaseRosGraph"
-# Provisional top-center mount. Positive ROS pitch points the camera downward.
-NAV_CAMERA_MOUNT_TRANSLATION = (0.10, 0.0, 1.70)
-NAV_CAMERA_MOUNT_PITCH = math.radians(12.0)
 NAV_CAMERA_OPTICAL_OFFSET = (0.0106, 0.0325, 0.0125)
+CAMERA_SPECS = (
+    # name, base_link translation, pitch down, yaw about base +Z
+    ("nav_camera", (0.10, 0.0, 1.70), math.radians(12.0), 0.0),
+    ("rear_camera", (-0.25, 0.0, 0.65), 0.0, math.pi),
+    ("left_camera", (0.0, 0.28, 0.65), 0.0, math.pi / 2.0),
+    ("right_camera", (0.0, -0.28, 0.65), 0.0, -math.pi / 2.0),
+)
+LIDAR_SPECS = (
+    ("front_lidar", (0.30, 0.0, 0.32)),
+    ("rear_lidar", (-0.30, 0.0, 0.32)),
+)
 GREEN_TARGET_PRIM = "/World/GreenTarget"
 GREEN_TARGET_SIZE = 0.20
 RACK_PRIM = "/World/ValidationRack"
@@ -481,11 +491,19 @@ def create_ros_state_graph(stage: Usd.Stage) -> None:
     )
 
 
-def add_camera_housing(stage: Usd.Stage, parent: str, mount_xyz: tuple[float, float, float], pitch: float) -> None:
+def add_camera_housing(
+    stage: Usd.Stage,
+    parent: str,
+    mount_xyz: tuple[float, float, float],
+    pitch: float,
+    yaw: float,
+) -> None:
     """Add a visible approximate D435 housing; dimensions follow the official URDF."""
     mount = UsdGeom.Xform.Define(stage, parent)
     mount.AddTranslateOp().Set(Gf.Vec3d(*mount_xyz))
-    mount.AddOrientOp().Set(Gf.Quatf(math.cos(pitch / 2.0), Gf.Vec3f(0.0, math.sin(pitch / 2.0), 0.0)))
+    mount.AddRotateXYZOp().Set(
+        Gf.Vec3f(0.0, math.degrees(pitch), math.degrees(yaw))
+    )
     body = UsdGeom.Cube.Define(stage, parent + "/housing")
     body.AddTranslateOp().Set(Gf.Vec3d(0.0106, 0.0, 0.0125))
     body.AddScaleOp().Set(Gf.Vec3f(0.012525, 0.045, 0.0125))
@@ -518,18 +536,28 @@ def validate_official_openarm(stage: Usd.Stage) -> None:
     )
 
 
-def create_nav_camera(stage: Usd.Stage) -> None:
-    """Create a pinhole sensor aligned with nav_camera_color_optical_frame."""
+def create_rgbd_camera(
+    stage: Usd.Stage,
+    name: str,
+    mount_xyz: tuple[float, float, float],
+    pitch: float,
+    yaw: float,
+) -> None:
+    """Create one pinhole RGB-D sensor using the real hardware topic contract."""
     import usdrt.Sdf
 
+    mount_prim = f"{BASE_LINK_PRIM}/{name}_mount"
+    camera_prim_path = f"{mount_prim}/{name}_color"
+    graph_path = f"/ProjectRgbd_{name}"
     add_camera_housing(
         stage,
-        NAV_CAMERA_MOUNT_PRIM,
-        NAV_CAMERA_MOUNT_TRANSLATION,
-        NAV_CAMERA_MOUNT_PITCH,
+        mount_prim,
+        mount_xyz,
+        pitch,
+        yaw,
     )
-    camera = UsdGeom.Camera.Define(stage, NAV_CAMERA_PRIM)
-    print("[mobile_manipulator_sim] nav camera prim defined", flush=True)
+    camera = UsdGeom.Camera.Define(stage, camera_prim_path)
+    print(f"[mobile_manipulator_sim] {name} prim defined", flush=True)
     camera.AddTranslateOp().Set(Gf.Vec3d(*NAV_CAMERA_OPTICAL_OFFSET))
     # USD cameras look along local -Z with +Y up.  This orientation makes -Z
     # point toward base +X, matching the ROS optical-frame convention.
@@ -544,16 +572,16 @@ def create_nav_camera(stage: Usd.Stage) -> None:
         20.955 * args.nav_camera_height / args.nav_camera_width
     )
     camera.GetFocalLengthAttr().Set(10.45)
-    print("[mobile_manipulator_sim] nav camera intrinsics configured", flush=True)
+    print(f"[mobile_manipulator_sim] {name} intrinsics configured", flush=True)
 
     camera_prim = camera.GetPrim()
     camera_prim.ApplyAPI("OmniSensorAPI")
     camera_prim.GetAttribute("omni:sensor:tickRate").Set(args.nav_camera_hz)
-    print("[mobile_manipulator_sim] nav camera sensor API configured", flush=True)
+    print(f"[mobile_manipulator_sim] {name} sensor API configured", flush=True)
 
     keys = og.Controller.Keys
     graph, _, _, _ = og.Controller.edit(
-        {"graph_path": NAV_CAMERA_GRAPH, "evaluator_name": "execution"},
+        {"graph_path": graph_path, "evaluator_name": "execution"},
         {
             keys.CREATE_NODES: [
                 ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
@@ -565,44 +593,48 @@ def create_nav_camera(stage: Usd.Stage) -> None:
                 ("CameraInfoPublisher", "isaacsim.ros2.bridge.ROS2CameraInfoHelper"),
             ],
             keys.SET_VALUES: [
-                ("CreateRenderProduct.inputs:cameraPrim", [usdrt.Sdf.Path(NAV_CAMERA_PRIM)]),
+                ("CreateRenderProduct.inputs:cameraPrim", [usdrt.Sdf.Path(camera_prim_path)]),
                 ("CreateRenderProduct.inputs:width", args.nav_camera_width),
                 ("CreateRenderProduct.inputs:height", args.nav_camera_height),
-                ("RgbPublisher.inputs:topicName", "sensors/nav_camera/color/image_raw"),
+                ("RgbPublisher.inputs:topicName", f"sensors/{name}/color/image_raw"),
                 ("RgbPublisher.inputs:type", "rgb"),
-                ("RgbPublisher.inputs:frameId", "nav_camera_color_optical_frame"),
+                ("RgbPublisher.inputs:frameId", f"{name}_color_optical_frame"),
                 ("RgbPublisher.inputs:resetSimulationTimeOnStop", True),
                 (
                     "DepthPublisher.inputs:topicName",
-                    "sensors/nav_camera/aligned_depth_to_color/image_raw",
+                    f"sensors/{name}/aligned_depth_to_color/image_raw",
                 ),
                 ("DepthPublisher.inputs:type", "depth"),
-                ("DepthPublisher.inputs:frameId", "nav_camera_color_optical_frame"),
+                ("DepthPublisher.inputs:frameId", f"{name}_color_optical_frame"),
                 ("DepthPublisher.inputs:resetSimulationTimeOnStop", True),
                 (
                     "PointcloudPublisher.inputs:topicName",
-                    "sensors/nav_camera/depth/color/points",
+                    f"sensors/{name}/depth/color/points",
                 ),
                 ("PointcloudPublisher.inputs:type", "depth_pcl"),
-                ("PointcloudPublisher.inputs:frameId", "nav_camera_color_optical_frame"),
+                ("PointcloudPublisher.inputs:frameId", f"{name}_color_optical_frame"),
                 ("PointcloudPublisher.inputs:resetSimulationTimeOnStop", True),
                 (
                     "SemanticPublisher.inputs:topicName",
-                    "sensors/nav_camera/semantic_segmentation",
+                    f"sensors/{name}/semantic_segmentation",
                 ),
                 ("SemanticPublisher.inputs:type", "semantic_segmentation"),
-                ("SemanticPublisher.inputs:frameId", "nav_camera_color_optical_frame"),
+                ("SemanticPublisher.inputs:frameId", f"{name}_color_optical_frame"),
+                # Semantic labels are only needed by the legacy single-camera
+                # perception profile. Disable four redundant semantic passes in
+                # the six-sensor navigation profile to fit an 8 GB laptop GPU.
+                ("SemanticPublisher.inputs:enabled", not args.enable_multi_sensor_nav),
                 ("SemanticPublisher.inputs:enableSemanticLabels", True),
                 (
                     "SemanticPublisher.inputs:semanticLabelsTopicName",
-                    "sensors/nav_camera/semantic_labels",
+                    f"sensors/{name}/semantic_labels",
                 ),
                 ("SemanticPublisher.inputs:resetSimulationTimeOnStop", True),
                 (
                     "CameraInfoPublisher.inputs:topicName",
-                    "sensors/nav_camera/color/camera_info",
+                    f"sensors/{name}/color/camera_info",
                 ),
-                ("CameraInfoPublisher.inputs:frameId", "nav_camera_color_optical_frame"),
+                ("CameraInfoPublisher.inputs:frameId", f"{name}_color_optical_frame"),
             ],
             keys.CONNECT: [
                 ("OnPlaybackTick.outputs:tick", "CreateRenderProduct.inputs:execIn"),
@@ -619,15 +651,66 @@ def create_nav_camera(stage: Usd.Stage) -> None:
             ],
         },
     )
-    print("[mobile_manipulator_sim] nav camera graph created", flush=True)
+    print(f"[mobile_manipulator_sim] {name} graph created", flush=True)
     og.Controller.evaluate_sync(graph)
     print(
-        "[mobile_manipulator_sim] nav RGB-D READY "
-        "top_mount=base_link:(0.10,0,1.70),pitch_down=12deg "
+        f"[mobile_manipulator_sim] RGB-D READY name={name} mount={mount_xyz} "
         f"{args.nav_camera_width}x{args.nav_camera_height}@{args.nav_camera_hz:g}Hz "
-        "frame=nav_camera_color_optical_frame",
+        f"frame={name}_color_optical_frame",
         flush=True,
     )
+
+
+def create_navigation_cameras(stage: Usd.Stage) -> None:
+    specs = CAMERA_SPECS if args.enable_multi_sensor_nav else CAMERA_SPECS[:1]
+    for name, mount_xyz, pitch, yaw in specs:
+        create_rgbd_camera(stage, name, mount_xyz, pitch, yaw)
+
+
+def create_navigation_lidars(stage: Usd.Stage) -> None:
+    """Create two rotary RTX lidars and publish standard ROS LaserScan topics."""
+    from isaacsim.sensors.experimental.rtx import Lidar
+
+    keys = og.Controller.Keys
+    for name, translation in LIDAR_SPECS:
+        prim_path = f"{BASE_LINK_PRIM}/{name}"
+        lidar = Lidar.create(
+            prim_path,
+            config="Example_Rotary_2D",
+            tick_rate=10.0,
+            translations=[translation],
+        )
+        graph, _, _, _ = og.Controller.edit(
+            {"graph_path": f"/ProjectLidar_{name}", "evaluator_name": "execution"},
+            {
+                keys.CREATE_NODES: [
+                    ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
+                    ("CreateRenderProduct", "isaacsim.core.nodes.IsaacCreateRenderProduct"),
+                    ("LaserScanPublisher", "isaacsim.ros2.bridge.ROS2RtxLidarHelper"),
+                ],
+                keys.SET_VALUES: [
+                    ("CreateRenderProduct.inputs:cameraPrim", [lidar.paths[0]]),
+                    ("LaserScanPublisher.inputs:topicName", f"sensors/{name}/scan"),
+                    ("LaserScanPublisher.inputs:type", "laser_scan"),
+                    ("LaserScanPublisher.inputs:frameId", f"{name}_link"),
+                    ("LaserScanPublisher.inputs:resetSimulationTimeOnStop", True),
+                ],
+                keys.CONNECT: [
+                    ("OnPlaybackTick.outputs:tick", "CreateRenderProduct.inputs:execIn"),
+                    ("CreateRenderProduct.outputs:execOut", "LaserScanPublisher.inputs:execIn"),
+                    (
+                        "CreateRenderProduct.outputs:renderProductPath",
+                        "LaserScanPublisher.inputs:renderProductPath",
+                    ),
+                ],
+            },
+        )
+        og.Controller.evaluate_sync(graph)
+        print(
+            f"[mobile_manipulator_sim] RTX LiDAR READY name={name} "
+            f"topic=/sensors/{name}/scan frame={name}_link",
+            flush=True,
+        )
 
 
 def create_rack_unit(
@@ -1063,6 +1146,8 @@ def main() -> None:
     if args.enable_nav_obstacle_control and not args.ros:
         raise ValueError("navigation obstacle control requires --ros")
 
+    if args.enable_multi_sensor_nav:
+        args.enable_nav_rgbd = True
     ros_enabled = args.ros or args.enable_nav_rgbd
     if ros_enabled:
         print("[mobile_manipulator_sim] enabling ROS 2 bridge", flush=True)
@@ -1091,8 +1176,8 @@ def main() -> None:
     print("[mobile_manipulator_sim] composed robot stage loaded", flush=True)
     validate_official_openarm(stage)
     configure_base_joint_drives(stage)
-    # The official OpenArm asset already contains its chest D435i-B; do not
-    # create another copy.  Only the added top camera feeds navigation.
+    # The official OpenArm asset already contains its chest D435i-B. The
+    # navigation sensors are separate base-mounted sensors.
     target_depths = args.green_target_depth_sequence or [args.green_target_depth]
     if args.green_target_stage_seconds <= 0.0:
         raise ValueError("green target stage duration must be positive")
@@ -1102,7 +1187,9 @@ def main() -> None:
         create_validation_rack(stage)
         create_rack_lighting(stage)
     if args.enable_nav_rgbd:
-        create_nav_camera(stage)
+        create_navigation_cameras(stage)
+    if args.enable_multi_sensor_nav:
+        create_navigation_lidars(stage)
     if args.enable_nav_obstacle_control:
         create_nav_test_obstacle(stage)
     if ros_enabled:

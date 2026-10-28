@@ -127,6 +127,27 @@ def test_hardware_profile_has_four_serial_bound_cameras_and_two_lidars():
     assert monitor["front_laser"]["type"] == "scan"
 
 
+def test_isaac_multi_sensor_profile_matches_hardware_topics():
+    simulator = (
+        PACKAGE_ROOT.parents[3] / "tools" / "isaac_sim" / "run_mobile_manipulator.py"
+    ).read_text(encoding="utf-8")
+    launch_text = (
+        PACKAGE_ROOT / "launch" / "mobile_base_multi_sensor_sim_navigation.launch.py"
+    ).read_text(encoding="utf-8")
+
+    assert '"--enable-multi-sensor-nav"' in simulator
+    for camera in ("nav_camera", "rear_camera", "left_camera", "right_camera"):
+        assert f'(\"{camera}\",' in simulator
+    for lidar in ("front_lidar", "rear_lidar"):
+        assert f'(\"{lidar}\",' in simulator
+    assert 'config="Example_Rotary_2D"' in simulator
+    assert 'f"sensors/{name}/scan"' in simulator
+    assert '"costmap_multi_sensor_overlay.yaml"' in launch_text
+    assert '"start_camera": "false"' in launch_text
+    assert '"use_sim_time": "true"' in launch_text
+    assert '"collision_source_timeout": "2.0"' in launch_text
+
+
 def test_carter_navigation_profile_pins_sim_clock_and_safe_output():
     launch_text = (PACKAGE_ROOT / "launch" / "carter_navigation.launch.py").read_text(
         encoding="utf-8"

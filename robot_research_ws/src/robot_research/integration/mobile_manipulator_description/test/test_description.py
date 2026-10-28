@@ -97,6 +97,25 @@ def test_simulation_can_request_nominal_realsense_frames():
     assert "nav_camera_gyro_optical_frame" in links
 
 
+def test_surround_sensor_frames_are_opt_in_and_connected_to_base():
+    default = _render_description("nav_camera_use_nominal_extrinsics:=true")
+    default_links = {node.attrib["name"] for node in default.findall("link")}
+    assert "rear_camera_link" not in default_links
+
+    root = _render_description(
+        "nav_camera_use_nominal_extrinsics:=true",
+        "surround_sensors_enabled:=true",
+    )
+    links = {node.attrib["name"] for node in root.findall("link")}
+    for name in ("rear_camera", "left_camera", "right_camera"):
+        assert f"{name}_link" in links
+        assert f"{name}_color_optical_frame" in links
+    for name in ("front_lidar", "rear_lidar"):
+        assert f"{name}_link" in links
+        joint = root.find(f"joint[@name='base_to_{name}']")
+        assert joint.find("parent").attrib["link"] == "base_link"
+
+
 def test_display_launch_forces_robot_description_to_string():
     launch_file = (
         Path(get_package_share_directory("mobile_manipulator_description"))

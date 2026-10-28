@@ -188,6 +188,11 @@ profile 由 `/swerve_controller/odom` 的底盘状态唯一负责该 TF，RTAB-M
 RTAB-Map 使用顶部中央、向下俯视 12° 的独立 D435；它与真机使用同一组上层话题和
 `nav_camera_color_optical_frame`：
 
+完整环视导航仿真可改用 `--enable-multi-sensor-nav`。该开关发布前后左右四路 RGB-D 和
+前后两路 RTX 2-D LiDAR，话题与实机 `hardware_sensors.yaml` 契约一致。已验证的
+8 GB 显存配置为 `--nav-camera-width 160 --nav-camera-height 120 --nav-camera-hz 5`；
+更高分辨率/帧率需要先测量六传感器持续发布能力。
+
 脚本默认生成 7×5 m 普通室内测试房间，包含四面墙、彩色箱体、立柱和前墙标记，均为
 独立程序化场景而非 Carter。只检查整机模型时可传 `--empty-scene` 恢复空旷 Grid。
 
