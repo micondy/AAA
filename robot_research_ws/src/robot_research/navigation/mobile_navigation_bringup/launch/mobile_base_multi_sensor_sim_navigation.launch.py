@@ -56,6 +56,18 @@ def generate_launch_description():
         name="cmd_vel_priority_mux",
         output="screen",
     )
+    web_console = Node(
+        package="mobile_base_web_console",
+        executable="web_console",
+        name="mobile_base_web_console",
+        remappings=[
+            ("/swerve_controller/cmd_vel", "/cmd_vel_web"),
+            ("/map", "/rtabmap/map"),
+        ],
+        additional_env={"MOBILE_BASE_SIMULATION_DIRECT_CONTROL": "true"},
+        condition=IfCondition(LaunchConfiguration("start_web_console")),
+        output="screen",
+    )
     camera_viewer = Node(
         package="mobile_navigation_bringup",
         executable="four_camera_viewer.py",
@@ -70,6 +82,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument("use_rviz", default_value="true"),
+        DeclareLaunchArgument("start_web_console", default_value="true"),
         DeclareLaunchArgument("start_camera_viewer", default_value="true"),
         DeclareLaunchArgument("camera_viewer_host", default_value="127.0.0.1"),
         DeclareLaunchArgument("camera_viewer_port", default_value="8090"),
@@ -80,5 +93,6 @@ def generate_launch_description():
         description,
         navigation,
         command_mux,
+        web_console,
         camera_viewer,
     ])

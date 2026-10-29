@@ -146,6 +146,10 @@ def test_isaac_multi_sensor_profile_matches_hardware_topics():
     assert '"start_camera": "false"' in launch_text
     assert '"use_sim_time": "true"' in launch_text
     assert '"collision_source_timeout": "2.0"' in launch_text
+    assert '"start_web_console", default_value="true"' in launch_text
+    assert 'package="mobile_base_web_console"' in launch_text
+    assert '("/swerve_controller/cmd_vel", "/cmd_vel_web")' in launch_text
+    assert '"MOBILE_BASE_SIMULATION_DIRECT_CONTROL": "true"' in launch_text
 
 
 def test_carter_navigation_profile_pins_sim_clock_and_safe_output():

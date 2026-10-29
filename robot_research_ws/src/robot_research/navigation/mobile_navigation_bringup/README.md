@@ -111,9 +111,11 @@ ros2 launch mobile_navigation_bringup mobile_base_multi_sensor_sim_navigation.la
   database_path:=$HOME/.ros/isaac_multi_sensor.db
 ```
 
-这个 Jazzy 启动入口会同时开启四相机网页查看器。在仿真电脑浏览器访问
-`http://127.0.0.1:8090/`，即可查看前、后、左、右四宫格及各路在线状态。它只提供
-RGB 预览，不提供底盘控制；如需从局域网其他设备查看，可显式传
+这个 Jazzy 启动入口会同时开启两个页面：`http://127.0.0.1:8080/` 为已有的地图与
+底盘控制台，`http://127.0.0.1:8090/` 为前、后、左、右四相机画面。8080 的手动命令
+经 `/cmd_vel_web` 进入优先级仲裁器，Nav2 安全输出经 `/cmd_vel_nav_safe` 进入同一个
+仲裁器，最后由 `/cmd_vel` 唯一驱动 Isaac。若不需要 8080，传
+`start_web_console:=false`。若需从局域网其他设备查看四相机，可显式传
 `camera_viewer_host:=0.0.0.0`，并按网络环境限制访问。端口可用
 `camera_viewer_port:=8091` 修改，不需要网页时传 `start_camera_viewer:=false`。
 
