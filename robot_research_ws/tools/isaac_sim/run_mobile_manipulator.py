@@ -114,6 +114,12 @@ def parse_args() -> argparse.Namespace:
             "ROS camera and TF queues bounded; 0 disables throttling."
         ),
     )
+    parser.add_argument(
+        "--sim-speed-scale",
+        type=float,
+        default=1.0,
+        help="Simulation-only multiplier for incoming chassis velocity commands.",
+    )
     return parser.parse_known_args()[0]
 
 
@@ -1143,6 +1149,8 @@ def main() -> None:
         raise RuntimeError(f"Composed robot USD not found: {ROBOT_USD}")
     if args.realtime_factor < 0.0:
         raise ValueError("realtime factor must be non-negative")
+    if not 0.1 <= args.sim_speed_scale <= 2.0:
+        raise ValueError("sim speed scale must be within [0.1, 2.0]")
     if args.enable_nav_obstacle_control and not args.ros:
         raise ValueError("navigation obstacle control requires --ros")
 
@@ -1254,6 +1262,9 @@ def main() -> None:
         while simulation_app.is_running():
             if ros_input is not None:
                 vx, vy, wz = ros_input.command()
+                vx *= args.sim_speed_scale
+                vy *= args.sim_speed_scale
+                wz *= args.sim_speed_scale
                 obstacle_request = ros_input.take_obstacle_request()
                 if obstacle_request is not None:
                     set_nav_test_obstacle(stage, *obstacle_request)

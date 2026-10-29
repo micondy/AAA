@@ -320,6 +320,15 @@ OpenArm 物理资产 + 底盘临时密度”，不能用于倾覆极限、制动
 
 ## 组合体固定 D435i 等效相机（S7-c）
 
+四相机、双雷达与 4×4 层架联动时，可在 Jazzy 仿真进程加入
+`--enable-multi-sensor-nav --add-rack --rack-layout grid4x4 --empty-scene`。
+`--sim-speed-scale 1.5` 只放大 Isaac 收到的底盘速度命令，不修改真机控制器、
+Nav2 限速或相机/雷达发布频率；允许范围为 0.1～2.0，默认 1.0。
+无窗口持续运行须显式设置较大的 `--test-seconds`，否则默认 10 秒后结束。
+8080 页面层架掩膜需要另启用已训练的 `rack_perception.yolo_detector_node`；
+亮图合成数据模型为 `models/rack_yolo26n_sim_lit_20261020.pt`，不能把旧暗图
+模型用于演示，且该模型不代表实机效果。
+
 顶部导航 D435 尚未制作支架，组合模型先使用临时位姿 `xyz=[0.10, 0, 1.12] m`、向下
 俯视 12°。胸前 D435i-B 不接入导航图。ROS 统一模型直接引用官方
 `realsense2_description`；Isaac 运行时相机位于 nominal 彩色光学中心并发布同一接口：
