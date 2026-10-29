@@ -71,6 +71,7 @@ def generate_launch_description():
             "initial_pose": LaunchConfiguration("initial_pose"),
             "mode": LaunchConfiguration("rtabmap_mode"),
             "fresh_map": LaunchConfiguration("fresh_map"),
+            "multi_sensor_mapping": LaunchConfiguration("multi_sensor_mapping"),
         }.items(),
     )
     camera_mount_tf = Node(
@@ -189,6 +190,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument("start_camera", default_value="true"),
+        DeclareLaunchArgument("multi_sensor_mapping", default_value="false"),
         DeclareLaunchArgument("use_rviz", default_value="true"),
         DeclareLaunchArgument("use_sim_time", default_value="false"),
         DeclareLaunchArgument("autostart", default_value="true"),

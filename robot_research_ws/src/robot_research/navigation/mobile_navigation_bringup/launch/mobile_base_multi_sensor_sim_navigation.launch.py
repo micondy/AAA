@@ -39,6 +39,7 @@ def generate_launch_description():
             "database_path": LaunchConfiguration("database_path"),
             "rtabmap_mode": LaunchConfiguration("rtabmap_mode"),
             "fresh_map": LaunchConfiguration("fresh_map"),
+            "multi_sensor_mapping": "true",
             "initial_pose": LaunchConfiguration("initial_pose"),
             "odom_source": "external",
             "odom_topic": "/swerve_controller/odom",

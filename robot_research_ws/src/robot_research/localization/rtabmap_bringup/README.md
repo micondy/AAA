@@ -13,6 +13,16 @@ sudo apt update
 sudo apt install ros-jazzy-rtabmap-ros
 ```
 
+四相机与双雷达仿真建图使用 `mobile_navigation_bringup` 的
+`mobile_base_multi_sensor_sim_navigation.launch.py`，默认开启
+`multi_sensor_mapping`。四路彩色图、对齐深度和内参先分别精确同步，
+再由 `rgbdx_sync` 近似同步为 `/rtabmap/rgbd_images`。前后 LaserScan 转为点云，
+通过机器人描述提供的静态 TF 聚合到 `base_link`，输出
+`/sensors/lidars/combined_cloud`。RTAB-Map 使用底盘里程计，并融合
+多相机 RGB-D 与雷达点云生成 `/rtabmap/map`。启动前必须检查四个相机
+光学坐标系、两个雷达坐标系及 `odom -> base_link` 的 TF，且传感器时间戳
+使用同一仿真时钟。真实硬件还需标定外参和时间同步；本入口只验证仿真配置。
+
 在线建图：
 
 ```bash

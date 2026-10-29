@@ -21,6 +21,9 @@ def _create_rtabmap_nodes(context):
     namespace = LaunchConfiguration("camera_namespace").perform(context)
     camera_name = LaunchConfiguration("camera_name").perform(context)
     camera = camera_prefix(namespace, camera_name)
+    multi_sensor = as_bool(LaunchConfiguration("multi_sensor_mapping").perform(context))
+    if multi_sensor and LaunchConfiguration("odom_source").perform(context).strip().lower() != "external":
+        raise ValueError("multi_sensor_mapping requires odom_source:=external")
     mode = LaunchConfiguration("mode").perform(context).strip().lower()
     odom_source = LaunchConfiguration("odom_source").perform(context).strip().lower()
     if odom_source not in {"rgbd", "external"}:
@@ -55,6 +58,15 @@ def _create_rtabmap_nodes(context):
         "publish_tf": as_bool(LaunchConfiguration("publish_map_tf").perform(context)),
         "use_sim_time": as_bool(LaunchConfiguration("use_sim_time").perform(context)),
     })
+    if multi_sensor:
+        slam_parameters.update({
+            "rgbd_cameras": 0,
+            "subscribe_scan_cloud": True,
+            "scan_cloud_is_2d": True,
+            "approx_sync": True,
+            "Grid/FromDepth": "false",
+            "qos_scan": 2,
+        })
     if odom_source == "external":
         # Wheel/chassis odometry owns odom -> base_link.  RTAB-Map consumes
         # that motion estimate and only owns the map -> odom correction.
@@ -64,24 +76,22 @@ def _create_rtabmap_nodes(context):
     if initial_pose:
         slam_parameters["initial_pose"] = initial_pose
 
-    rgbd_sync = Node(
-        package="rtabmap_sync",
-        executable="rgbd_sync",
-        namespace="rtabmap",
-        name="rgbd_sync",
-        parameters=[{
-            "approx_sync": False,
-            "qos": 2,
-            "qos_camera_info": 2,
-        }],
-        remappings=[
-            ("rgb/image", f"{camera}/color/image_raw"),
-            ("depth/image", f"{camera}/aligned_depth_to_color/image_raw"),
-            ("rgb/camera_info", f"{camera}/color/camera_info"),
-            ("rgbd_image", "/rtabmap/rgbd_image"),
-        ],
-        output="screen",
-    )
+    camera_names = ("nav_camera", "rear_camera", "left_camera", "right_camera") if multi_sensor else (camera_name,)
+    rgbd_sync_nodes = []
+    for index, name in enumerate(camera_names):
+        prefix = camera_prefix(namespace, name) if multi_sensor else camera
+        rgbd_sync_nodes.append(Node(
+            package="rtabmap_sync", executable="rgbd_sync", namespace="rtabmap",
+            name=f"rgbd_sync_{name}" if multi_sensor else "rgbd_sync",
+            parameters=[{"approx_sync": False, "qos": 2, "qos_camera_info": 2,
+                         "use_sim_time": as_bool(LaunchConfiguration("use_sim_time").perform(context))}],
+            remappings=[
+                ("rgb/image", f"{prefix}/color/image_raw"),
+                ("depth/image", f"{prefix}/aligned_depth_to_color/image_raw"),
+                ("rgb/camera_info", f"{prefix}/color/camera_info"),
+                ("rgbd_image", f"{prefix}/rgbd_image" if multi_sensor else "/rtabmap/rgbd_image"),
+            ], output="screen",
+        ))
     arguments = []
     if mode == "mapping" and as_bool(
         LaunchConfiguration("fresh_map").perform(context)
@@ -98,6 +108,9 @@ def _create_rtabmap_nodes(context):
     ]
     if odom_source == "rgbd":
         slam_remappings.append(("odom_info", "/rtabmap/odom_info"))
+    if multi_sensor:
+        slam_remappings.append(("rgbd_images", "/rtabmap/rgbd_images"))
+        slam_remappings.append(("scan_cloud", "/sensors/lidars/combined_cloud"))
     slam = Node(
         package="rtabmap_slam",
         executable="rtabmap",
@@ -108,7 +121,38 @@ def _create_rtabmap_nodes(context):
         arguments=arguments,
         output="screen",
     )
-    nodes = [rgbd_sync]
+    nodes = list(rgbd_sync_nodes)
+    if multi_sensor:
+        nodes.append(Node(
+            package="rtabmap_sync", executable="rgbdx_sync", namespace="rtabmap",
+            name="four_camera_sync",
+            parameters=[{"rgbd_cameras": 4, "approx_sync": True,
+                         "use_sim_time": as_bool(LaunchConfiguration("use_sim_time").perform(context))}],
+            remappings=[
+                *[(f"rgbd_image{index}", f"{camera_prefix(namespace, name)}/rgbd_image")
+                  for index, name in enumerate(camera_names)],
+                ("rgbd_images", "/rtabmap/rgbd_images"),
+            ], output="screen",
+        ))
+        for name in ("front_lidar", "rear_lidar"):
+            nodes.append(Node(
+                package="rtabmap_bringup", executable="laser_scan_to_cloud.py",
+                name=f"{name}_scan_to_cloud",
+                parameters=[{"scan_topic": f"/sensors/{name}/scan",
+                             "cloud_topic": f"/sensors/{name}/cloud",
+                             "use_sim_time": as_bool(LaunchConfiguration("use_sim_time").perform(context))}],
+                output="screen",
+            ))
+        nodes.append(Node(
+            package="rtabmap_util", executable="point_cloud_aggregator",
+            name="dual_lidar_aggregator",
+            parameters=[{"count": 2, "approx_sync": True, "fixed_frame_id": "base_link",
+                         "use_sim_time": as_bool(LaunchConfiguration("use_sim_time").perform(context))}],
+            remappings=[("cloud1", "/sensors/front_lidar/cloud"),
+                        ("cloud2", "/sensors/rear_lidar/cloud"),
+                        ("combined_cloud", "/sensors/lidars/combined_cloud")],
+            output="screen",
+        ))
     if odom_source == "rgbd":
         nodes.append(Node(
             package="rtabmap_odom",
@@ -163,6 +207,8 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument("start_camera", default_value="true"),
+        DeclareLaunchArgument("multi_sensor_mapping", default_value="false",
+                              description="Fuse four RGB-D cameras and two LaserScans with external odometry"),
         DeclareLaunchArgument("use_rviz", default_value="true"),
         DeclareLaunchArgument("use_sim_time", default_value="false"),
         DeclareLaunchArgument("camera_namespace", default_value="camera"),
