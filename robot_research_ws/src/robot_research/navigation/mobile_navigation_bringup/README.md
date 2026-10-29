@@ -111,6 +111,12 @@ ros2 launch mobile_navigation_bringup mobile_base_multi_sensor_sim_navigation.la
   database_path:=$HOME/.ros/isaac_multi_sensor.db
 ```
 
+这个 Jazzy 启动入口会同时开启四相机网页查看器。在仿真电脑浏览器访问
+`http://127.0.0.1:8090/`，即可查看前、后、左、右四宫格及各路在线状态。它只提供
+RGB 预览，不提供底盘控制；如需从局域网其他设备查看，可显式传
+`camera_viewer_host:=0.0.0.0`，并按网络环境限制访问。端口可用
+`camera_viewer_port:=8091` 修改，不需要网页时传 `start_camera_viewer:=false`。
+
 仿真和实机共用话题及 costmap overlay，但仿真把传感器超时放宽到 2 秒。四相机安装位姿
 目前是仿真布局，不能复制为实机外参。
 

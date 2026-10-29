@@ -4,7 +4,7 @@ project(mobile_navigation_bringup)
 find_package(ament_cmake REQUIRED)
 
 install(
-  DIRECTORY config lattice launch
+  DIRECTORY config lattice launch web
   DESTINATION share/${PROJECT_NAME}
 )
 install(
@@ -12,6 +12,7 @@ install(
     scripts/carter_mapping_route.py
     scripts/collision_safety_benchmark.py
     scripts/cmd_vel_priority_mux.py
+    scripts/four_camera_viewer.py
     scripts/dynamic_obstacle_intrusion_benchmark.py
     scripts/isaac_obstacle_safety_benchmark.py
     scripts/navigation_waypoint_benchmark.py

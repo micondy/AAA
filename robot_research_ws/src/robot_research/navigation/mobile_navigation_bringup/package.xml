@@ -9,6 +9,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>d435i_bringup</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
@@ -34,6 +35,7 @@
   <exec_depend>nvblox_bringup</exec_depend>
   <exec_depend>nvblox_nav2</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>rtabmap_bringup</exec_depend>
   <exec_depend>rviz2</exec_depend>
