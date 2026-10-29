@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import signal
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -15,6 +16,7 @@ from ament_index_python.packages import get_package_share_directory
 from cv_bridge import CvBridge
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import ExternalShutdownException
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 
@@ -138,9 +140,12 @@ def main() -> None:
     viewer.get_logger().info(f"Four-camera viewer: http://{viewer.host}:{viewer.port}/")
     try:
         rclpy.spin(viewer)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        # ros2 launch forwards another SIGINT during child shutdown. Let the
+        # first one stop spinning, then finish HTTP and ROS cleanup unhindered.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         server.shutdown()
         server.server_close()
         viewer.destroy_node()
