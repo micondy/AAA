@@ -1,0 +1,23 @@
+# D435i 高分辨率参数（1280×720@15，深度与彩色同分辨率）
+# 用法：
+#   ros2 launch d435i_bringup camera.launch.py \
+#     camera_namespace:=sensors camera_name:=nav_camera \
+#     serial_no:=346122070466 stage:=full use_rviz:=false \
+#     params_file:=<本文件绝对路径>
+#
+# 为什么是 15 fps：这台机器上 1280×720@30 双流会触发
+#   "Depth stream start failure / Hardware Error"，实测帧率崩到 2 Hz；
+#   1280×720@15 把 USB 带宽减半，可稳定运行（静态草菇拍摄足够）。
+# 如果仍然不稳，回退到官方 config/realsense_d435i.yaml（848×480@30）。
+device_type: d435i
+enable_infra1: false
+enable_infra2: false
+depth_module.depth_profile: 1280x720x15
+rgb_camera.color_profile: 1280x720x15
+pointcloud.stream_filter: 2
+pointcloud.stream_index_filter: 0
+unite_imu_method: 2
+enable_sync: true
+publish_tf: true
+tf_publish_rate: 0.0
+diagnostics_period: 1.0

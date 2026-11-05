@@ -1,0 +1,15 @@
+{
+  "name": "草菇采集台",
+  "short_name": "草菇采集",
+  "description": "草菇现场采集：实时 RGB-D 取景、编号化拍照、测量记录",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

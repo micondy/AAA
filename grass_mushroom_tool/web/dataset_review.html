@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>数据集 · 已对齐 RGB-D 检查</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111820;color:#e5edf4;font:16px/1.65 system-ui,sans-serif}main{max-width:1600px;margin:auto;padding:24px}h1{margin:0;font-size:26px}h2{font-size:19px}p{margin:8px 0 16px;color:#becbd7}.controls{display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin:18px 0}select,input,button{font:inherit;accent-color:#55d6c2}select,button,input[type=number]{background:#243442;color:#fff;border:1px solid #638090;border-radius:5px;padding:6px}input[type=number]{width:100px}button{cursor:pointer}.views{display:grid;grid-template-columns:1fr 1fr;gap:16px}canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair;background:#000}figure{margin:0}figcaption{padding:6px 0;color:#b9cad7}.status{padding:12px 0;font-variant-numeric:tabular-nums}.warn{color:#ffc26e}a{color:#65dfd0}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}td,th{padding:8px;text-align:left;border-bottom:1px solid #334450}tr[data-index]{cursor:pointer}tr.active{background:#243d48}details{margin:24px 0}summary{cursor:pointer}li{margin:8px 0}@media(max-width:850px){.views{grid-template-columns:1fr}main{padding:14px}}
+</style><main>
+<h1>数据集 · 已对齐 RGB-D 检查</h1>
+<p>仅显示通过对齐标记、尺寸、坐标系和单位检查的数据。RGB 为查看用 JPEG；深度保留原始整数毫米。新增采集后请重新运行生成命令。</p>
+<div class="controls"><label>会话 <select id="session"></select></label><label>样本 <select id="sample"></select></label><label>组号 <select id="group"></select></label><button id="prev">上一组</button><button id="next">下一组</button><label>右图 <select id="mode"><option value="depth">深度伪彩</option><option value="overlay">RGB + 深度叠加</option></select></label><label>叠加深度占比 <input id="alpha" type="range" min="0" max="1" step="0.05" value="0.5"></label></div>
+<div id="meta" class="status" aria-live="polite"></div>
+<div class="controls"><label>近端 mm <input id="low" type="number" min="1" value="300"></label><label>远端 mm <input id="high" type="number" min="2" value="350"></label><button id="auto">按当前帧 P2–P98 设置</button><span>蓝＝近 → 青 → 黄 → 红＝远；黑＝无效 0；超出色标的有效值显示端点颜色。</span></div>
+<div class="views"><figure><canvas id="rgb" width="848" height="480" aria-label="RGB，可点击读数或拖选区域"></canvas><figcaption>RGB · 点击看像素深度；拖动框选菇体内部或边缘</figcaption></figure><figure><canvas id="depth" width="848" height="480" aria-label="对齐深度，可点击读数或拖选区域"></canvas><figcaption id="legend">对齐深度 · 两图使用相同像素坐标</figcaption></figure></div>
+<div id="probe" class="status" aria-live="polite">点击任意图查看深度；拖动框选区域，查看非零比例、中位数和 P10–P90。</div>
+<div id="links"></div><details><summary id="summary-title">读取情况</summary><div id="skipped"></div><p><a href="summary.csv">下载逐组统计 CSV</a> · <a href="inspection.json">查看跳过原因</a></p></details>
+<details open><summary>如何判断深度好坏</summary><ol>
+<li><strong>先看时间差。</strong>优先检查 Δt=0 的组。非零时间差不代表空间标定错误，但移动相机或目标会造成错位。本页尚未做实测精度标定。</li>
+<li><strong>用叠加图核对菇体轮廓。</strong>切换右图到叠加，调节深度占比；菇帽的深度凸起应落在同一个菇帽上。寻找多个位置都存在的偏移，而不是只看一个边缘。伪彩范围只影响显示，不改变深度值。</li>
+<li><strong>框选单个菇体内部。</strong>检查非零比例、深度是否成片连续；黑色 0 是空洞，不能当作 0 mm 距离。全图非零比例不是菇体可用率，也不是准确率。不要把背景一起框入后据此评价菇体。</li>
+<li><strong>检查边缘和小菇。</strong>边缘大面积黑洞、拖尾、深度跨到背景，会影响尺寸或抓取点。表面有坡度时深度自然变化，P10–P90 范围大不能单独判为噪声。</li>
+<li><strong>验证测量误差。</strong>本页单帧无法评价重复性或绝对精度。固定相机和目标拍多帧，再用已知尺寸/距离实测对比。这里的 Z 是光学轴深度，不是到相机中心的斜距，也不是菇高。</li>
+</ol></details>
+<details><summary>当前样本汇总（点击行切换）</summary><p>非零比例统计整张图；深度分位数只统计非零像素。</p><table><thead><tr><th>组</th><th>Δt ms</th><th>非零 %</th><th>P2 mm</th><th>中位数 mm</th><th>P98 mm</th></tr></thead><tbody id="rows"></tbody></table></details>
+</main><script>
+'use strict';
+const frames=__DATA__;
+const summary=__SUMMARY__;
+const el=id=>document.getElementById(id), rgb=el('rgb'),dep=el('depth'),rc=rgb.getContext('2d'),dc=dep.getContext('2d');
+const buf=document.createElement('canvas');buf.width=848;buf.height=480;const bc=buf.getContext('2d',{willReadFrequently:true});
+let current=0, token=0,z=null,image=null,roi=null,start=null;
+let subset=[],W=848,H=480;
+el('summary-title').textContent=`读取情况：${summary.aligned_frames} 组可查看，${summary.skipped.length} 组跳过`;
+for(const item of summary.skipped){const line=document.createElement('div');line.textContent=`${item.frame}：${item.reason}`;el('skipped').appendChild(line)}
+for(const session of [...new Set(frames.map(f=>f.session))])el('session').add(new Option(session,session));
+function sampleOptions(){el('sample').replaceChildren();for(const sample of [...new Set(frames.filter(f=>f.session===el('session').value).map(f=>f.sample))])el('sample').add(new Option(sample,sample));groupOptions()}
+function groupOptions(){subset=frames.map((f,i)=>i).filter(i=>frames[i].session===el('session').value&&frames[i].sample===el('sample').value);el('group').replaceChildren();el('rows').replaceChildren();subset.forEach(i=>{const f=frames[i];el('group').add(new Option(`第 ${f.group} 组 · Δt ${f.dt??'未知'} ms`,String(i)));const tr=document.createElement('tr');tr.dataset.index=i;[f.group,f.dt??'未知',f.valid,f.lo,f.median,f.hi].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td)});tr.onclick=()=>load(i).catch(fail);el('rows').appendChild(tr)});if(subset.length)load(subset[0]).catch(fail)}
+function fail(error){z=null;el('meta').textContent='图像载入失败';el('probe').textContent='载入失败：'+(error.message||String(error))+'。请重新生成报告；本页已改用内嵌图像，避免本地文件的画布读取限制。'}
+el('session').onchange=sampleOptions;el('sample').onchange=groupOptions;
+
+function loadImage(src){return new Promise((resolve,reject)=>{const im=new Image();const timer=setTimeout(()=>reject(new Error('图像载入超时')),15000);im.onload=()=>{clearTimeout(timer);resolve(im)};im.onerror=()=>{clearTimeout(timer);reject(new Error('图像文件无法读取'))};im.src=src})}
+async function load(i){current=i;const f=frames[current],t=++token;el('group').value=current;z=null;roi=null;el('probe').textContent='图像载入中…';
+const [c,d]=await Promise.all([loadImage(f.rgb),loadImage(f.depth)]);if(t!==token)return;image=c;W=f.width;H=f.height;for(const canvas of [rgb,dep,buf]){canvas.width=W;canvas.height=H}bc.drawImage(d,0,0);const px=bc.getImageData(0,0,W,H).data;z=new Uint16Array(W*H);for(let k=0;k<z.length;k++)z[k]=px[4*k]*256+px[4*k+1];
+el('low').value=f.lo;el('high').value=Math.max(f.hi,f.lo+1);el('meta').textContent=`${f.session} / ${f.sample} · 第 ${f.group} 组 · ${f.time} · 已对齐 · Δt ${f.dt??'未知'} ms · 整图非零深度 ${f.valid}% · ${W}×${H}`;el('meta').classList.toggle('warn',f.dt===null||f.dt>0);
+el('probe').textContent='点击读深度，或拖动框选单个菇体。';el('links').replaceChildren();['color','depth','meta'].forEach(kind=>{const a=document.createElement('a');a.textContent=`原始 ${kind}　`;a.href=f.originals[kind];a.target='_blank';el('links').appendChild(a)});document.querySelectorAll('tr[data-index]').forEach(tr=>tr.classList.toggle('active',Number(tr.dataset.index)===current));render();}
+function render(){if(!z)return;const lo=Number(el('low').value),hi=Number(el('high').value);if(!(hi>lo)){el('legend').textContent='远端必须大于近端';return;}const pixels=dc.createImageData(W,H);
+for(let k=0;k<z.length;k++){let r=0,g=0,b=0;if(z[k]){const v=Math.max(0,Math.min(1,(z[k]-lo)/(hi-lo)));r=Math.round(255*Math.max(0,Math.min(1,1.5-Math.abs(4*v-3))));g=Math.round(255*Math.max(0,Math.min(1,1.5-Math.abs(4*v-2))));b=Math.round(255*Math.max(0,Math.min(1,1.5-Math.abs(4*v-1))));}pixels.data.set([r,g,b,255],k*4)}
+bc.putImageData(pixels,0,0);draw();el('legend').textContent=`对齐深度 · 色标 ${lo}–${hi} mm · 黑色为 0（无效）`;}
+function draw(){rc.clearRect(0,0,W,H);dc.clearRect(0,0,W,H);rc.drawImage(image,0,0);if(el('mode').value==='overlay'){dc.drawImage(image,0,0);dc.globalAlpha=Number(el('alpha').value)}dc.drawImage(buf,0,0);dc.globalAlpha=1;if(roi){for(const ctx of [rc,dc]){ctx.strokeStyle='#ff42e2';ctx.lineWidth=2;ctx.strokeRect(roi.x0,roi.y0,Math.max(1,roi.x1-roi.x0),Math.max(1,roi.y1-roi.y0))}}}
+function point(e,c){const b=c.getBoundingClientRect();return {x:Math.max(0,Math.min(W-1,Math.floor((e.clientX-b.left)*W/b.width))),y:Math.max(0,Math.min(H-1,Math.floor((e.clientY-b.top)*H/b.height)))}}
+function inspect(a,b){roi={x0:Math.min(a.x,b.x),x1:Math.max(a.x,b.x),y0:Math.min(a.y,b.y),y1:Math.max(a.y,b.y)};const vals=[];let total=0;for(let y=roi.y0;y<=roi.y1;y++)for(let x=roi.x0;x<=roi.x1;x++){total++;if(z[y*W+x])vals.push(z[y*W+x])}vals.sort((a,b)=>a-b);const q=p=>vals[Math.floor((vals.length-1)*p)];const single=total===1;el('probe').textContent=single?`像素 (${a.x}, ${a.y}) · Z=${z[a.y*W+a.x]||'无效 0'}${z[a.y*W+a.x]?' mm':''}`:`区域 (${roi.x0},${roi.y0})–(${roi.x1},${roi.y1}) · ${total} 像素 · 非零 ${(vals.length/total*100).toFixed(1)}% · ${vals.length?`中位数 ${q(.5)} mm · P10–P90 ${q(.1)}–${q(.9)} mm`:'无有效深度'}`;draw();}
+for(const c of [rgb,dep]){c.addEventListener('pointerdown',e=>{if(!z)return;start=point(e,c);c.setPointerCapture(e.pointerId);inspect(start,start)});c.addEventListener('pointermove',e=>{if(start&&z)inspect(start,point(e,c))});c.addEventListener('pointerup',e=>{if(start&&z)inspect(start,point(e,c));start=null});c.addEventListener('pointercancel',()=>{start=null})}
+el('group').onchange=()=>load(Number(el('group').value)).catch(fail);el('prev').onclick=()=>{if(subset.length)load(subset[(subset.indexOf(current)+subset.length-1)%subset.length]).catch(fail)};el('next').onclick=()=>{if(subset.length)load(subset[(subset.indexOf(current)+1)%subset.length]).catch(fail)};el('mode').onchange=()=>{if(z)draw()};el('alpha').oninput=()=>{if(z)draw()};for(const id of ['low','high'])el(id).oninput=render;el('auto').onclick=()=>{if(!z)return;el('low').value=frames[current].lo;el('high').value=Math.max(frames[current].hi,frames[current].lo+1);render()};if(frames.length){sampleOptions()}else{el('meta').textContent='没有通过检查的已对齐帧，请展开读取情况查看原因';el('probe').textContent='无可查看数据'}
+</script></html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="草菇采集台">
+  <title>草菇采集台</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" href="/icon-192.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🍄</span>
+      <div class="brand-text">
+        <h1>草菇采集台</h1>
+        <p id="session-line" class="muted">未建立会话</p>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip" id="chip-camera" title="D435i 状态">相机 —</span>
+      <span class="chip" id="chip-bag" title="rosbag 录制状态">录包 —</span>
+      <span class="chip" id="chip-disk" title="磁盘剩余空间">磁盘 —</span>
+      <span class="chip hidden" id="chip-upload">上传中</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="view-samples" class="view"></section>
+    <section id="view-env" class="view hidden"></section>
+    <section id="view-progress" class="view hidden"></section>
+    <section id="view-settings" class="view hidden"></section>
+  </main>
+
+  <nav class="tabbar">
+    <button data-tab="samples" class="active"><span>📷</span>样本</button>
+    <button data-tab="env"><span>🌿</span>环境</button>
+    <button data-tab="progress"><span>📊</span>进度</button>
+    <button data-tab="settings"><span>⚙️</span>设置</button>
+  </nav>
+
+  <input type="file" id="file-input" accept="image/*" capture="environment" hidden>
+  <div id="toast" class="toast"></div>
+  <div id="lightbox" class="lightbox hidden"><img alt="预览"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

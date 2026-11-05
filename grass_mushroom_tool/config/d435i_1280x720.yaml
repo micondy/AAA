@@ -1,0 +1,21 @@
+# D435i 高分辨率参数（1280×720@30，深度与彩色同分辨率，便于对齐后逐像素使用）
+# 用法：
+#   ros2 launch d435i_bringup camera.launch.py \
+#     camera_namespace:=sensors camera_name:=nav_camera \
+#     serial_no:=346122070466 stage:=full use_rviz:=false \
+#     params_file:=<本文件绝对路径>
+#
+# 注意：1280×720 双流 + 对齐深度 + 点云需要 USB 3.0（5 Gbps）连接；
+# 带宽不够时优先降回 848x480x30，或把 pointcloud 关掉。
+device_type: d435i
+enable_infra1: false
+enable_infra2: false
+depth_module.depth_profile: 1280x720x30
+rgb_camera.color_profile: 1280x720x30
+pointcloud.stream_filter: 2
+pointcloud.stream_index_filter: 0
+unite_imu_method: 2
+enable_sync: true
+publish_tf: true
+tf_publish_rate: 0.0
+diagnostics_period: 1.0
